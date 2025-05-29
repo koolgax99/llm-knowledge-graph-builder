@@ -6,7 +6,7 @@ echo "This script is located in the src/knowledge_graph directory."
 echo "The current directory is: $(pwd)"
 
 # Have all files in one variable
-files=$(ls ./data_input_exp_4/txt)
+files=$(ls ./data/input/data_input_exp_5_2)
 
 # Loop through each file
 for file in $files
@@ -19,7 +19,7 @@ do
     # remove txt from the file name
     output_file=${file%.txt}
     # Call the Python script with the file as an argument
-    python generate-graph.py --input "./data_input_exp_4/txt/$file" --output "./data_output_exp_4/$output_file.html" > ./logs/$output_file.log 2>&1
+    python generate-graph.py --input "./data/input/data_input_exp_5_2/$file" --output "./data/output/data_output_exp_5_2/$output_file.html" > ./logs/exp_5_2/$output_file.log 2>&1
     # Check if the Python script was successful
     if [ $? -eq 0 ]; then
       echo "Successfully processed $file"
