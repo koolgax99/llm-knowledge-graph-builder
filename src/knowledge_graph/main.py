@@ -223,7 +223,15 @@ def process_file(config, input_file, output_file, debug=False):
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2)
-            print(f"Saved raw knowledge graph data to {output_file}")
+
+            # also save the raw data to txt file
+            raw_output_file = output_file.replace('.json', '.txt')
+            with open(raw_output_file, 'w', encoding='utf-8') as f:
+                for item in result:
+                    # save result directly but without indentation for raw text
+                    f.write(result + '\n')
+            print(f"Saved processed triples to {output_file}")
+            print(f"Saved raw knowledge graph data to {raw_output_file}")
         except Exception as e:
             print(f"Warning: Could not save raw data to {output_file}: {e}")
         return result

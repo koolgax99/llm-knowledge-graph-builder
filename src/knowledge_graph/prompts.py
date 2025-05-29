@@ -66,6 +66,7 @@ Your task: Read the research paper on Lupus (delimited by triple backticks) and 
 Follow these rules carefully:
 
 Focus on Medical Knowledge: Extract triplets related to lupus mechanisms, symptoms, treatments, diagnosis, and related medical concepts only.
+Focus on Lupus and Food: Extract triplets related to lupus and how various foods, diet, chemicals affect progression.
 Exclude Metadata: Do not create triplets about authors, institutions, publication details, or citation information.
 Entity Consistency: Use consistent names for medical entities throughout. For example, if "Systemic Lupus Erythematosus" is also mentioned as "SLE" or just "Lupus", use the most complete form consistently in all triples.
 Atomic Terms: Identify distinct medical terms (diseases, symptoms, organs, treatments, mechanisms, etc.). Keep terms atomistic rather than merging multiple concepts.
