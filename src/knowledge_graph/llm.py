@@ -201,6 +201,10 @@ def extract_json_from_text(text):
                 
                 # Try to fix missing quotes around keys
                 fixed_json = re.sub(r'(\s*)(\w+)(\s*):(\s*)', r'\1"\2"\3:\4', json_str)
+                # Fix stray words before quoted keys
+                fixed_json = re.sub(r'(\s+)\w+\s+"([^"]+)"(\s*):(\s*)', r'\1"\2"\3:\4', fixed_json)
+                # Fix stray words after quoted keys
+                fixed_json = re.sub(r'(\s+)"([^"]+)"\s+\w+(\s*):(\s*)', r'\1"\2"\3:\4', fixed_json)
                 # Fix trailing commas
                 fixed_json = re.sub(r',(\s*[\]}])', r'\1', fixed_json)
                 
