@@ -1,8 +1,8 @@
 """Entity standardization and relationship inference for knowledge graphs."""
 import re
 from collections import defaultdict
-from src.knowledge_graph.llm import call_llm, call_openai
-from src.knowledge_graph.prompts import (
+from src.knowledge_graph_builder.llm import call_llm, call_openai
+from src.knowledge_graph_builder.prompts import (
     ENTITY_RESOLUTION_SYSTEM_PROMPT, 
     get_entity_resolution_user_prompt,
     RELATIONSHIP_INFERENCE_SYSTEM_PROMPT,
@@ -434,7 +434,7 @@ def _resolve_entities_with_llm(triples, config):
 
         # Extract JSON mapping
         import json
-        from src.knowledge_graph.llm import extract_json_from_text
+        from src.knowledge_graph_builder.llm import extract_json_from_text
         
         entity_mapping = extract_json_from_text(response)
         
@@ -531,7 +531,7 @@ def _infer_relationships_with_llm(triples, communities, config):
                 response = call_openai(model, user_prompt, system_prompt, max_tokens, temperature, base_url)
                 
                 # Extract JSON results
-                from src.knowledge_graph.llm import extract_json_from_text
+                from src.knowledge_graph_builder.llm import extract_json_from_text
                 inferred_triples = extract_json_from_text(response)
                 
                 if inferred_triples and isinstance(inferred_triples, list):
@@ -646,7 +646,7 @@ def _infer_within_community_relationships(triples, communities, config):
             response = call_openai(model, user_prompt, system_prompt, max_tokens, temperature, base_url)
         
             # Extract JSON results
-            from src.knowledge_graph.llm import extract_json_from_text
+            from src.knowledge_graph_builder.llm import extract_json_from_text
             inferred_triples = extract_json_from_text(response)
             
             if inferred_triples and isinstance(inferred_triples, list):

@@ -10,7 +10,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
     
-from src.knowledge_graph.main import main
+from src.knowledge_graph_builder.main import main
 
 if __name__ == "__main__":
     # Pass command line arguments to the main function

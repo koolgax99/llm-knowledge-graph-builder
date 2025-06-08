@@ -9,12 +9,12 @@ import sys
 # Add the parent directory to the Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from src.knowledge_graph.config import load_config
-from src.knowledge_graph.llm import call_llm, extract_json_from_text, call_ollama, call_openai
-from src.knowledge_graph.visualization import visualize_knowledge_graph, sample_data_visualization
-from src.knowledge_graph.text_utils import chunk_text
-from src.knowledge_graph.entity_standardization import standardize_entities, infer_relationships, limit_predicate_length
-from src.knowledge_graph.prompts import MAIN_SYSTEM_PROMPT, MAIN_USER_PROMPT, MAIN_LUPUS_USER_PROMPT, MAIN_UV_USER_PROMPT
+from src.knowledge_graph_builder.config import load_config
+from src.knowledge_graph_builder.llm import call_llm, extract_json_from_text, call_ollama, call_openai
+from src.knowledge_graph_builder.visualization import visualize_knowledge_graph, sample_data_visualization
+from src.knowledge_graph_builder.text_utils import chunk_text
+from src.knowledge_graph_builder.entity_standardization import standardize_entities, infer_relationships, limit_predicate_length
+from src.knowledge_graph_builder.prompts import MAIN_SYSTEM_PROMPT, MAIN_USER_PROMPT, MAIN_LUPUS_USER_PROMPT, MAIN_UV_USER_PROMPT, MAIN_SCLC_USER_PROMPT, MAIN_SCLC_SYSTEM_PROMPT
 
 def process_with_llm(config, input_text, debug=False):
     """
@@ -29,8 +29,8 @@ def process_with_llm(config, input_text, debug=False):
         List of extracted triples or None if processing failed
     """
     # Use prompts from the prompts module
-    system_prompt = MAIN_SYSTEM_PROMPT
-    user_prompt = MAIN_LUPUS_USER_PROMPT
+    system_prompt = MAIN_SCLC_SYSTEM_PROMPT
+    user_prompt = MAIN_SCLC_USER_PROMPT
     user_prompt += f"```\n{input_text}```\n" 
 
     # LLM configuration

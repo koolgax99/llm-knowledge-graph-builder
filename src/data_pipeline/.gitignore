@@ -1,0 +1,8 @@
+sentinenv
+.env
+*.xlsx
+*.csv
+*.db
+.pytest_cache
+__pycache__
+DS_Store

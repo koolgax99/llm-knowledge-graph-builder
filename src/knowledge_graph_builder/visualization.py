@@ -413,7 +413,7 @@ def sample_data_visualization(output_file="sample_knowledge_graph.html", edge_sm
 
 if __name__ == "__main__":
     # Run sample visualization when this module is run directly
-    from src.knowledge_graph.config import load_config
+    from src.knowledge_graph_builder.config import load_config
     
     # Try to load config, fall back to defaults if not found
     config = load_config()
