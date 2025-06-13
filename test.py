@@ -1,24 +1,27 @@
-# from Bio import Entrez
-# Entrez.email = "sanda.n@northeastern.edu"
-# handle = Entrez.esearch(db="pubmed", retmax=10, term="opuntia[ORGN] accD", idtype="acc")
-# record = Entrez.read(handle)
-# handle.close()
+from Bio import Entrez
+Entrez.email = "sanda.n@northeastern.edu"
+Entrez.api_key = "017fc6d872ddd63d8eb3fee095c352283309"
+handle = Entrez.esearch(db="pubmed", retmax=250, term="SCLC", idtype="acc")
+record = Entrez.read(handle)
+handle.close()
 
-# print(record['QueryTranslation'])
+id_list = record.get("IdList", [])
 
-from marker.converters.pdf import PdfConverter
-from marker.models import create_model_dict
-from marker.config.parser import ConfigParser
-from marker.output import text_from_rendered
+print(len(id_list))
+print(id_list)
+# from marker.converters.pdf import PdfConverter
+# from marker.models import create_model_dict
+# from marker.config.parser import ConfigParser
+# from marker.output import text_from_rendered
 
-config = {
-    "output_format": "markdown",
-    "disable_image_extraction": "true"
-}
-config_parser = ConfigParser(config)
-from marker.models import create_model_dict
+# config = {
+#     "output_format": "markdown",
+#     "disable_image_extraction": "true"
+# }
+# config_parser = ConfigParser(config)
+# from marker.models import create_model_dict
 
-print(create_model_dict())
+# print(create_model_dict())
 
 # converter = PdfConverter(
 #     config=config_parser.generate_config_dict(),
