@@ -5,7 +5,6 @@ Example query format (when the search term already contains field tags):
     {search_term} AND ("{min_year}/01/01"[dp] : "{max_year}/12/31"[dp])
 """
 
-# import logging
 from typing import List, Dict
 import time
 import xml.etree.ElementTree as ET
@@ -25,7 +24,6 @@ Entrez.email = ENTREZ_EMAIL
 # Optionally set the PubMed API key if provided
 PUBMED_API_KEY = os.getenv("PUBMED_API_KEY")
 if PUBMED_API_KEY:
-    print("Using PubMed API key for enhanced rate limits.")
     Entrez.api_key = PUBMED_API_KEY
 
 
@@ -40,18 +38,17 @@ def run_pubmed_search(search_term: str, min_year: int, max_year: int, ret_max: i
     """
     # Construct query with date filters.
     query = f'{search_term} AND "{min_year}/01/01"[dp] : "{max_year}/12/31"[dp]'
-    # logging.info("Final query for PubMed: %s", query)
     print(f"Final query for PubMed: {query}")
 
     try:
         # Use Entrez.esearch to get a list of PubMed IDs (up to 250).
         handle = Entrez.esearch(db="pubmed", term=query,
-                                ret_max=ret_max, sort="relevance")
+                                retmax=ret_max, idtype="acc")
         search_results = Entrez.read(handle)
         handle.close()
         id_list = search_results.get("IdList", [])
         query_translation = search_results.get("QueryTranslation", "")
-        # logging.info("Found %d PubMed IDs", len(id_list))
+        print("Final Query: ", query_translation)
         print(f"Found {len(id_list)} PubMed IDs")
     except Exception as e:
         # logging.error("Error during Entrez.esearch: %s", str(e))
@@ -140,3 +137,11 @@ def parse_article(article_xml) -> dict:
     article_data["RefID"] = ""
 
     return article_data
+
+if __name__ == "__main__":
+    result = run_pubmed_search(
+        search_term="Small Cell Lung Cancer",
+        min_year=2010,
+        max_year=2025,
+        ret_max=500
+    )

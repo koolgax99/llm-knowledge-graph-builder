@@ -1,6 +1,10 @@
 */__pycache__
 */.DS_Store
-.DS_Store
+*.xlsx
+*.csv
+*.db
+.pytest_cache
+__pycache__
 # PyVis generated libraries
 lib/
 

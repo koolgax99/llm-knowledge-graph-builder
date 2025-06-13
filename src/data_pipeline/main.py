@@ -10,14 +10,15 @@ from pubmed.pubmed_downloader import run_pubmed_downloader
 from utils.database import init_db, store_metadata, store_search_results, get_engine_session
 from utils.csv_export import export_to_csv
 from utils.constants import DEFAULT_DATE_RANGE
-from utils.pdf_to_text import main_pdf_converter
+from dotenv import load_dotenv
+# from utils.pdf_to_text import main_pdf_converter
 import os
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 
-def main(user_query=None, min_year=None, max_year=None, experiment_name=None, output_folder=None):
+def main_data_pipeline(user_query=None, min_year=None, max_year=None, experiment_name=None, output_folder=None):
     """
     Process a PubMed search request with the given parameters.
     
@@ -51,7 +52,7 @@ def main(user_query=None, min_year=None, max_year=None, experiment_name=None, ou
 
     # Execute PubMed search
     logging.info("Executing PubMed search...")
-    search_results, final_query = run_pubmed_search(user_query, min_year, max_year)
+    search_results, final_query = run_pubmed_search(user_query, min_year, max_year, ret_max=250)
     logging.info("Retrieved %d search results", len(search_results))
 
     # Initialize database and store results
@@ -91,14 +92,14 @@ def main(user_query=None, min_year=None, max_year=None, experiment_name=None, ou
     except Exception as e:
         logging.error("Error during PubMed downloader: %s", str(e))
 
-    # Conver the pdf files to text
-    try:
-        logging.info("Converting PDF files to text...")
-        txt_converted_folder = os.path.join(output_folder or "data", f"{experiment_name}_txt_converted")
-        main_pdf_converter(pdf_download_folder, txt_converted_folder or "data")
-        logging.info("PDF files converted to text and saved in %s", txt_converted_folder)
-    except Exception as e:
-        logging.error("Error converting PDF files to text: %s", str(e))
+    # Convert the pdf files to text
+    # try:
+    #     logging.info("Converting PDF files to text...")
+    #     txt_converted_folder = os.path.join(output_folder or "data", f"{experiment_name}_txt_converted")
+    #     main_pdf_converter(pdf_download_folder, txt_converted_folder or "data")
+    #     logging.info("PDF files converted to text and saved in %s", txt_converted_folder)
+    # except Exception as e:
+    #     logging.error("Error converting PDF files to text: %s", str(e))
 
     # Return results for potential further processing
     return {
@@ -110,7 +111,7 @@ def main(user_query=None, min_year=None, max_year=None, experiment_name=None, ou
         "output_filename": pmid_csv_filename,
         "errors_filename": errors_csv_filename,
         "pdf_download_folder": pdf_download_folder,
-        "txt_converted_folder": txt_converted_folder
+        # "txt_converted_folder": txt_converted_folder
     }
 
 
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        main(
+        main_data_pipeline(
             user_query=args.query,
             min_year=args.min_year, 
             max_year=args.max_year,

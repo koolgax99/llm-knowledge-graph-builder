@@ -239,66 +239,54 @@ def process_file(config, input_file, output_file, debug=False):
         print(f"Knowledge graph generation failed for file: {input_file}")
         return None
 
-def main():
-    """Main entry point for the knowledge graph generator."""
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Knowledge Graph Generator and Visualizer')
-    parser.add_argument('--test', action='store_true', help='Generate a test visualization with sample data')
-    parser.add_argument('--config', type=str, default='config.toml', help='Path to configuration file')
-    parser.add_argument('--output', type=str, default='knowledge_graph.html', help='Output HTML file path')
-    parser.add_argument('--input', type=str, required=False, help='Path to input text file or folder (required unless --test is used)')
-    parser.add_argument('--debug', action='store_true', help='Enable debug output (raw LLM responses and extracted JSON)')
-    parser.add_argument('--no-standardize', action='store_true', help='Disable entity standardization')
-    parser.add_argument('--no-inference', action='store_true', help='Disable relationship inference')
-
-    args = parser.parse_args()
-
+def main_kg_builder(input_path, output_dir, config_path='config.toml', debug=False, no_standardize=False, no_inference=False):
+    """Main entry point for the knowledge graph generator.
+    
+    Args:
+        input_path: Path to input text file or folder (required unless test is True)
+        output_path: Output HTML file path
+        config_path: Path to configuration file
+        test: Generate a test visualization with sample data
+        debug: Enable debug output (raw LLM responses and extracted JSON)
+        no_standardize: Disable entity standardization
+        no_inference: Disable relationship inference
+    """
     # Load configuration
-    config = load_config(args.config)
+    config = load_config(config_path)
     if not config:
-        print(f"Failed to load configuration from {args.config}. Exiting.")
-        return
-
-    # If test flag is provided, generate a sample visualization
-    if args.test:
-        print("Generating sample data visualization...")
-        sample_data_visualization(args.output, config=config)
-        print(f"\nSample visualization saved to {args.output}")
-        print(f"To view the visualization, open the following file in your browser:")
-        print(f"file://{os.path.abspath(args.output)}")
+        print(f"Failed to load configuration from {config_path}. Exiting.")
         return
 
     # For normal processing, input path is required
-    if not args.input:
-        print("Error: --input is required unless --test is used")
-        parser.print_help()
+    if not input_path:
+        print("Error: input_path is required unless test is True")
         return
 
-    # Override configuration settings with command line arguments
-    if args.no_standardize:
+    # Override configuration settings with function arguments
+    if no_standardize:
         config.setdefault("standardization", {})["enabled"] = False
-    if args.no_inference:
+    if no_inference:
         config.setdefault("inference", {})["enabled"] = False
 
     # Check if input is a file or folder
-    if os.path.isfile(args.input):
+    if os.path.isfile(input_path):
         # Single file processing
-        output_file = args.output.replace('.html', '.json')
-        result = process_file(config, args.input, output_file, args.debug)
+        output_file = output_path.replace('.html', '.json')
+        result = process_file(config, input_path, output_file, debug)
 
         if result:
             # Visualize the knowledge graph
-            stats = visualize_knowledge_graph(result, args.output, config=config)
+            stats = visualize_knowledge_graph(result, output_path, config=config)
             print("\nKnowledge Graph Statistics:")
             print(f"Nodes: {stats['nodes']}")
             print(f"Edges: {stats['edges']}")
             print(f"Communities: {stats['communities']}")
             print("\nTo view the visualization, open the following file in your browser:")
-            print(f"file://{os.path.abspath(args.output)}")
-    elif os.path.isdir(args.input):
+            print(f"file://{os.path.abspath(output_path)}")
+    elif os.path.isdir(input_path):
         # Folder processing
-        input_folder = args.input
-        output_folder = os.path.join(os.path.dirname(args.output), "json_outputs")
+        input_folder = input_path
+        output_folder = os.path.join(os.path.dirname(output_path), "json_outputs")
         os.makedirs(output_folder, exist_ok=True)
 
         all_results = []
@@ -306,23 +294,42 @@ def main():
             if file_name.endswith(".txt"):
                 input_file = os.path.join(input_folder, file_name)
                 output_file = os.path.join(output_folder, f"{os.path.splitext(file_name)[0]}.json")
-                result = process_file(config, input_file, output_file, args.debug)
+                result = process_file(config, input_file, output_file, debug)
                 if result:
                     all_results.extend(result)
 
         if all_results:
             # Visualize the combined knowledge graph
-            stats = visualize_knowledge_graph(all_results, args.output, config=config)
+            stats = visualize_knowledge_graph(all_results, output_path, config=config)
             print("\nKnowledge Graph Statistics:")
             print(f"Nodes: {stats['nodes']}")
             print(f"Edges: {stats['edges']}")
             print(f"Communities: {stats['communities']}")
             print("\nTo view the visualization, open the following file in your browser:")
-            print(f"file://{os.path.abspath(args.output)}")
+            print(f"file://{os.path.abspath(output_path)}")
         else:
             print("No valid knowledge graphs were generated from the folder.")
     else:
-        print(f"The path {args.input} is neither a file nor a folder.")
+        print(f"The path {input_path} is neither a file nor a folder.")
 
 if __name__ == "__main__":
-    main()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Knowledge Graph Generator and Visualizer')
+    parser.add_argument('--config', type=str, default='config.toml', help='Path to configuration file')
+    parser.add_argument('--output-dir', type=str, default='knowledge_graph.html', help='Output HTML file path')
+    parser.add_argument('--input', type=str, required=False, help='Path to input text file or folder (required unless --test is used)')
+    parser.add_argument('--debug', action='store_true', help='Enable debug output (raw LLM responses and extracted JSON)')
+    parser.add_argument('--no-standardize', action='store_true', help='Disable entity standardization')
+    parser.add_argument('--no-inference', action='store_true', help='Disable relationship inference')
+
+    args = parser.parse_args()
+    
+    # Call the main_kg_builder function with parsed arguments
+    main_kg_builder(
+        input_path=args.input,
+        output_dir=args.output_dir,
+        config_path=args.config,
+        debug=args.debug,
+        no_standardize=args.no_standardize,
+        no_inference=args.no_inference
+    )

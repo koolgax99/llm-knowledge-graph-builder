@@ -7,196 +7,131 @@ It supports multiple publishers including NEJM, Science Direct, and PubMed Centr
 """
 
 import os
-import re
 import sys
 import argparse
-import urllib.parse
-from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+from typing import Optional, Tuple
+from Bio import Entrez
+import xml.etree.ElementTree as ET
+import time
+from dotenv import load_dotenv
+from indra.literature.pmc_client import extract_text
 
-def get_main_url(url):
-    """Extract the base URL from a full URL."""
-    return "/".join(url.split("/")[:3])
+# Load environment variables from .env file
+load_dotenv()
 
+# Set your email for Entrez from the environment variable
+ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL")
+if not ENTREZ_EMAIL:
+    raise ValueError("Please set ENTREZ_EMAIL in your .env file.")
+Entrez.email = ENTREZ_EMAIL
 
-def save_pdf_from_url(pdf_url, directory, name, headers):
-    """Download and save a PDF file from a given URL."""
-    try:
-        response = requests.get(pdf_url, headers=headers, allow_redirects=True)
-        response.raise_for_status()  # Raise exception for HTTP errors
-
-        filepath = f'{directory}/{name}.pdf'
-        with open(filepath, 'wb') as f:
-            f.write(response.content)
-        return True
-    except Exception as e:
-        print(f"Error saving PDF: {e}")
-        return False
-
-
-class PdfFinder:
-    """Contains methods to locate PDF download links from various publishers."""
-
-    @staticmethod
-    def acs_publications(req, soup, headers):
-        """Find PDF links on ACS Publications websites."""
-        possibleLinks = [x for x in soup.find_all('a') if type(x.get('title')) == str and (
-            'high-res pdf' in x.get('title').lower() or 'low-res pdf' in x.get('title').lower())]
-
-        if possibleLinks:
-            print("** fetching reprint using the 'acsPublications' finder...")
-            return get_main_url(req.url) + possibleLinks[0].get('href')
-        return None
-
-    @staticmethod
-    def direct_pdf_link(req, soup, headers):
-        """Check if URL directly points to a PDF."""
-        if req.content[-4:] == b'.pdf':
-            print("** fetching reprint using the 'direct pdf link' finder...")
-            return req.url
-        return None
-
-    @staticmethod
-    def future_medicine(req, soup, headers):
-        """Find PDF links on Future Medicine websites."""
-        possibleLinks = soup.find_all(
-            'a', attrs={'href': re.compile("/doi/pdf")})
-        if possibleLinks:
-            print("** fetching reprint using the 'future medicine' finder...")
-            return get_main_url(req.url) + possibleLinks[0].get('href')
-        return None
-
-    @staticmethod
-    def generic_citation_labelled(req, soup, headers):
-        """Find PDF links using citation_pdf_url meta tag."""
-        possibleLinks = soup.find_all(
-            'meta', attrs={'name': 'citation_pdf_url'})
-        if possibleLinks:
-            print("** fetching reprint using the 'generic citation labelled' finder...")
-            return possibleLinks[0].get('content')
-        return None
-
-    @staticmethod
-    def nejm(req, soup, headers):
-        """Find PDF links on New England Journal of Medicine website."""
-        possibleLinks = [x for x in soup.find_all('a') if type(x.get(
-            'data-download-type')) == str and (x.get('data-download-type').lower() == 'article pdf')]
-
-        if possibleLinks:
-            print("** fetching reprint using the 'NEJM' finder...")
-            return get_main_url(req.url) + possibleLinks[0].get('href')
-        return None
-
-    @staticmethod
-    def pubmed_central_v1(req, soup, headers):
-        """Find PDF links on PubMed Central (version 1)."""
-        possibleLinks = soup.find_all('a', re.compile('pdf'))
-        # Filter out epdf links (for Wiley compatibility)
-        possibleLinks = [
-            x for x in possibleLinks if 'title' in x.attrs and 'epdf' not in x.get('title').lower()]
-
-        if possibleLinks:
-            print("** fetching reprint using the 'pubmed central v1' finder...")
-            return get_main_url(req.url) + possibleLinks[0].get('href')
-        return None
-
-    @staticmethod
-    def pubmed_central_v2(req, soup, headers):
-        """Find PDF links on PubMed Central (version 2)."""
-        possibleLinks = soup.find_all(
-            'a', attrs={'href': re.compile('/pmc/articles')})
-
-        if possibleLinks:
-            print("** fetching reprint using the 'pubmed central v2' finder...")
-            return f"https://www.ncbi.nlm.nih.gov{possibleLinks[0].get('href')}"
-        return None
-
-    @staticmethod
-    def science_direct(req, soup, headers):
-        """Find PDF links on Science Direct websites."""
-        try:
-            newUri = urllib.parse.unquote(
-                soup.find_all('input')[0].get('value'))
-            req = requests.get(newUri, allow_redirects=True, headers=headers)
-            soup = BeautifulSoup(req.content, 'lxml')
-
-            possibleLinks = soup.find_all(
-                'meta', attrs={'name': 'citation_pdf_url'})
-
-            if possibleLinks:
-                print("** fetching reprint using the 'science_direct' finder...")
-                req = requests.get(possibleLinks[0].get(
-                    'content'), headers=headers)
-                soup = BeautifulSoup(req.content, 'lxml')
-                return soup.find_all('a')[0].get('href')
-        except (IndexError, AttributeError):
-            pass
-        return None
-
-    @staticmethod
-    def uchicago_press(req, soup, headers):
-        """Find PDF links on University of Chicago Press websites."""
-        possibleLinks = [x for x in soup.find_all('a') if type(x.get(
-            'href')) == str and 'pdf' in x.get('href') and '.edu/doi/' in x.get('href')]
-
-        if possibleLinks:
-            print("** fetching reprint using the 'uchicagoPress' finder...")
-            return get_main_url(req.url) + possibleLinks[0].get('href')
-        return None
+# Optionally set the PubMed API key if provided
+PUBMED_API_KEY = os.getenv("PUBMED_API_KEY")
+if PUBMED_API_KEY:
+    print("Using PubMed API key for enhanced rate limits.")
+    Entrez.api_key = PUBMED_API_KEY
 
 
-def fetch(pmid, finders_list, name, headers, error_file):
-    """
-    Attempt to fetch a PDF for the given PubMed ID using various finder methods.
+def check_full_text_availability(pmid: str) -> Tuple[bool, Optional[str]]:
+    """Check if full text is available in PMC and get PMC ID if it exists.
     
     Args:
-        pmid (str): PubMed ID to fetch
-        finders_list (list): List of finder method names to try
-        name (str): Name to save the PDF as
-        headers (dict): HTTP headers for requests
-        error_file: File to write errors to
+        pmid: PubMed ID of the article
         
     Returns:
-        bool: Success status
+        Tuple of (availability boolean, PMC ID if available)
     """
-    # Get the redirect URL from PubMed
-    uri = f"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&id={pmid}&retmode=ref&cmd=prlinks"
-
     try:
-        req = requests.get(uri, headers=headers)
-        req.raise_for_status()
-
-        # Skip Ovid links as they're not supported
-        if 'ovid' in req.url:
-            print(
-                f" ** Reprint {pmid} cannot be fetched as ovid is not supported by the requests package.")
-            error_file.write(f"{pmid}\t{name}\n")
-            return True
-
-        soup = BeautifulSoup(req.content, 'lxml')
-
-        # Try each finder method until one succeeds
-        for finder_name in finders_list:
-            print(f"Trying {finder_name}")
-            finder_method = getattr(PdfFinder, finder_name)
-            pdf_url = finder_method(req, soup, headers)
-
-            if pdf_url is not None:
-                if save_pdf_from_url(pdf_url, args['out'], name, headers):
-                    print(f"** fetching of reprint {pmid} succeeded")
-                    return True
-
-        # If we get here, all finders failed
-        print(
-            f"** Reprint {pmid} could not be fetched with the current finders.")
-        error_file.write(f"{pmid}\t{name}\n")
-        return False
-
+        print(f"Checking PMC availability for PMID {pmid}")
+        handle = Entrez.elink(dbfrom="pubmed", db="pmc", id=pmid)
+        
+        if not handle:
+            print(f"No PMC link found for PMID {pmid}")
+            return False, None
+            
+        xml_content = handle.read()
+        handle.close()
+        
+        # Parse XML to get PMC ID
+        root = ET.fromstring(xml_content)
+        linksetdb = root.find(".//LinkSetDb")
+        if linksetdb is None:
+            print(f"No PMC ID found for PMID {pmid}")
+            return False, None
+            
+        id_elem = linksetdb.find(".//Id")
+        if id_elem is None:
+            print(f"No PMC ID element found for PMID {pmid}")
+            return False, None
+            
+        pmc_id = id_elem.text
+        print(f"Found PMC ID {pmc_id} for PMID {pmid}")
+        return True, pmc_id
+        
     except Exception as e:
-        print(f"** Error in fetch function: {e}")
-        error_file.write(f"{pmid}\t{name}\n")
-        return False
+        print(f"Error checking PMC availability for PMID {pmid}: {str(e)}")
+        return False, None
+
+def get_full_text(pmid: str) -> Optional[str]:
+    """Get full text of the article if available through PMC.
+    
+    Handles truncated responses by making additional requests.
+    
+    Args:
+        pmid: PubMed ID of the article
+        
+    Returns:
+        Full text content if available, None otherwise
+    """
+    try:
+        # First check availability and get PMC ID
+        available, pmc_id = check_full_text_availability(pmid)
+        if not available or pmc_id is None:
+            print(f"Full text not available in PMC for PMID {pmid}")
+            return None
+
+        print(f"Fetching full text for PMC ID {pmc_id}")
+        content = ""
+        retstart = 0
+        
+        while True:
+            full_text_handle = Entrez.efetch(
+                db="pmc", 
+                id=pmc_id, 
+                rettype="xml",
+                retstart=retstart
+            )
+            
+            if not full_text_handle:
+                break
+                
+            chunk = full_text_handle.read()
+            full_text_handle.close()
+            
+            if isinstance(chunk, bytes):
+                chunk = chunk.decode('utf-8')
+            
+            content += chunk
+            
+            # Check if there might be more content
+            if "[truncated]" not in chunk and "Result too long" not in chunk:
+                break
+                
+            # Increment retstart for next chunk
+            retstart += len(chunk)
+            
+            # Add small delay to respect API rate limits
+            time.sleep(0.5)
+        
+
+        result  = extract_text(content)
+        return result
+        
+    except Exception as e:
+        print(f"Error getting full text for PMID {pmid}: {str(e)}")
+        return None
 
 
 def parse_arguments():
@@ -211,8 +146,6 @@ def parse_arguments():
         '-out', help="Output directory for fetched articles. Default: fetched_pdfs", default="fetched_pdfs")
     parser.add_argument(
         '-errors', help="Output file path for pmids which failed to fetch. Default: unfetched_pmids.tsv", default="unfetched_pmids.tsv")
-    parser.add_argument(
-        '-maxRetries', help="Change max number of retries per article on an error 104. Default: 3", default=3, type=int)
 
     args = vars(parser.parse_args())
 
@@ -232,7 +165,7 @@ def parse_arguments():
     return args
 
 
-def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file, max_retries=3):
+def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
     """Main execution function."""
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
@@ -240,57 +173,34 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file, max_retri
             f"Output directory of {output_dir} did not exist. Created the directory.")
         os.mkdir(output_dir)
 
-    # Set up headers for HTTP requests
-    headers = requests.utils.default_headers()
-    headers['User-Agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
-
-    # Set up list of finder methods (converted to snake_case)
-    finders = [
-        'generic_citation_labelled',
-        'pubmed_central_v2',
-        'acs_publications',
-        'uchicago_press',
-        'nejm',
-        'future_medicine',
-        'science_direct',
-        'direct_pdf_link',
-    ]
-
     df = pd.read_csv(input_csv_file)
     pmids = df['PMID'].tolist()
     names = df['Title'].tolist()
     names = [str(name) for name in names]  # Ensure all names are strings
 
-    names = [name.replace(" ", "_").replace(" ", "_").replace(".", "_") for name in names]
+    names = [name.replace(" ", "_").replace(" ", "_").replace(".", "_").replace("/", "_") for name in names]
 
     # Process each PMID
     errors = []
-    
     for pmid, name in zip(pmids, names):
         print(f"Trying to fetch pmid {pmid}")
         
-        retries = 0
-        while retries < max_retries:
-            try:
-                fetch(pmid, finders, name, headers, None)
-                break
-            except requests.ConnectionError as e:
-                if '104' in str(e) or 'BadStatusLine' in str(e):
-                    retries += 1
-                    if retries < max_retries:
-                        print(f"** fetching of reprint {pmid} failed from error {e}, retrying")
-                    else:
-                        print(f"** fetching of reprint {pmid} failed from error {e}")
-                        errors.append({'pmid': pmid, 'name': name})
-                else:
-                    print(f"** fetching of reprint {pmid} failed from error {e}")
-                    errors.append({'pmid': pmid, 'name': name})
-                    break
-            except Exception as e:
-                print(f"** fetching of reprint {pmid} failed from error {e}")
+        try:
+            output = get_full_text(str(pmid))
+            if output:
+                # Save the full text to a file
+                filepath = os.path.join(output_dir, f"{name}.txt")
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(output)
+                print(f"** fetching of reprint {pmid} succeeded")
+            else:
+                print(f"** fetching of reprint {pmid} failed, no full text available")
                 errors.append({'pmid': pmid, 'name': name})
-                break
-    
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                print(f"** fetching of reprint {pmid} failed, article not found")
+                errors.append({'pmid': pmid, 'name': name})
+        
     # Write errors to CSV
     if errors:
         pd.DataFrame(errors).to_csv(errors_csv_file, index=False, header=False)
@@ -298,4 +208,4 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file, max_retri
 
 if __name__ == "__main__":
     args = parse_arguments()
-    run_pubmed_downloader(args['out'], args['csv'], args['errors'], args['maxRetries'])
+    run_pubmed_downloader(args['out'], args['csv'], args['errors'])
