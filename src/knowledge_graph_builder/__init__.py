@@ -4,10 +4,14 @@ Knowledge Graph Generator and Visualizer.
 A tool that takes text input and generates an interactive knowledge graph visualization.
 """
 
-from src.knowledge_graph_builder.visualization import visualize_knowledge_graph, sample_data_visualization
+__all__ = ['utils', 'visualization', 'main', 'config', 'llm', 'prompts', 'text_utils']
 
-from src.knowledge_graph_builder.llm import call_llm, extract_json_from_text, call_openai, call_ollama
-
-from src.knowledge_graph_builder.config import load_config
+from . import utils
+from . import visualization
+from . import main
+from . import config
+from . import llm
+from . import prompts
+from . import text_utils
 
 __version__ = "0.1.0"

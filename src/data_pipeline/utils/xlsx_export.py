@@ -5,7 +5,7 @@ xlsx_export.py: Contains functions to export the search results and metadata to 
 import os
 import pandas as pd
 from datetime import datetime
-from .database import SearchResult, Metadata
+from src.data_pipeline.utils.database import SearchResult, Metadata
 
 
 def check_filename(filename):

@@ -40,9 +40,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run the data pipeline and knowledge graph builder."
     )
-    parser.add_argument("query", type=str, help="The query string to be processed.")
+    parser.add_argument("--query", type=str, help="The query string to be processed.")
     parser.add_argument(
-        "output_folder",
+        "--output_folder",
         type=str,
         default="/home/exouser/masters-thesis/ai-knowledge-graph-main/data2",
         help="The folder where the output files will be saved.",
