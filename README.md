@@ -1,145 +1,210 @@
-# AI Powered Knowledge Graph Generator
+# LLM Knowledge Graph Builder
 
-This system takes an unstructured text document, and uses an LLM of your choice to extract knowledge in the form of Subject-Predicate-Object (SPO) triplets, and visualizes the relationships as an interactive knowledge graph.
+An AI-powered system that automatically extracts structured knowledge graphs from scientific literature by combining PubMed data retrieval with Large Language Model processing to create interactive visualizations of entity relationships.
 
 ## Features
 
-- **Text Chunking**: Automatically splits large documents into manageable chunks for processing
-- **Knowledge Extraction**: Uses AI to identify entities and their relationships
-- **Entity Standardization**: Ensures consistent entity naming across document chunks
-- **Relationship Inference**: Discovers additional relationships between disconnected parts of the graph
-- **Interactive Visualization**: Creates an interactive graph visualization
-- **Works with Any OpenAI Compatible API Endpoint**: Ollama, LM Studio, OpenAI, vLLM, LiteLLM (provides access to AWS Bedrock, Azure OpenAI, Anthropic and many other LLM services) 
+- **Automated Literature Retrieval**: Searches and downloads scientific articles from PubMed based on user queries [1](#0-0) 
+- **LLM-Powered Knowledge Extraction**: Uses configurable LLMs to extract Subject-Predicate-Object triples from text [2](#0-1) 
+- **Entity Standardization**: Ensures consistent entity naming across document chunks [3](#0-2) 
+- **Relationship Inference**: Discovers additional relationships between disconnected graph components [4](#0-3) 
+- **Interactive Visualization**: Generates web-based knowledge graphs with zoom, pan, and hover capabilities
+- **Multi-Provider LLM Support**: Compatible with OpenAI, Ollama, and any OpenAI-compatible API endpoints
 
 ## Requirements
 
 - Python 3.11+
-- Required packages (install using `pip install -r requirements.txt`)
+- PubMed API access (ENTREZ_EMAIL required)
+- LLM API access (OpenAI, Ollama, or compatible endpoint)
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/koolgax99/llm-knowledge-graph-builder.git
+cd llm-knowledge-graph-builder
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set up environment variables:
+```bash
+# Create .env file with:
+ENTREZ_EMAIL=your.email@example.com
+PUBMED_API_KEY=your_pubmed_api_key  # Optional but recommended
+```
+
+4. Configure LLM settings in `config.toml`:
+```toml
+[llm]
+model = "gpt-3.5-turbo"
+api_key = "your-api-key"
+base_url = "https://api.openai.com/v1/chat/completions"
+max_tokens = 8192
+temperature = 0.2
+```
 
 ## Quick Start
 
-1. Clone this repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure your settings in `config.toml`
-4. Run the system:
+Run the complete pipeline with a single command: [5](#0-4) 
 
 ```bash
-python generate-graph.py --input your_text_file.txt --output knowledge_graph.html
+python src/main.py --query "machine learning in healthcare" --output_folder ./output
 ```
 
-Or installing and using as a module:
+This will:
+1. Search PubMed for relevant articles
+2. Download and process the papers
+3. Extract knowledge graphs using LLM analysis
+4. Generate interactive HTML visualizations
 
-```bash
-pip install --upgrade -e .
-generate-graph --input your_text_file.txt --output knowledge_graph.html
+## System Architecture
+
+The system implements a two-stage pipeline architecture: [6](#0-5) 
+
+```mermaid
+graph TB
+    subgraph "Stage 1: Data Pipeline"
+        A[PubMed Search] --> B[Article Download]
+        B --> C[PDF Storage]
+    end
+    
+    subgraph "Stage 2: Knowledge Graph Builder"
+        D[Text Chunking] --> E[LLM Processing]
+        E --> F[Entity Standardization]
+        F --> G[Relationship Inference]
+        G --> H[Interactive Visualization]
+    end
+    
+    C --> D
 ```
+
+### Stage 1: Data Pipeline
+- Searches PubMed using configurable date ranges and query terms
+- Downloads articles and stores metadata in SQLite database
+- Exports results to CSV for analysis
+
+### Stage 2: Knowledge Graph Builder
+- Processes text through three-phase LLM pipeline
+- Extracts Subject-Predicate-Object triples
+- Standardizes entities and infers relationships
+- Generates interactive HTML visualizations
 
 ## Configuration
 
-The system can be configured using the config.toml file:
+### Data Pipeline Configuration
+Set environment variables in `.env`:
+```bash
+ENTREZ_EMAIL=your.email@example.com
+PUBMED_API_KEY=your_api_key  # Optional
+```
+
+### Knowledge Graph Builder Configuration
+Configure `config.toml`: [7](#0-6) 
 
 ```toml
 [llm]
-model = "gemma3"  # Google open weight model
-api_key = "sk-1234"
-base_url = "http://localhost:11434/v1/chat/completions" # Local Ollama instance running locally (but can be any OpenAI compatible endpoint)
+model = "gpt-3.5-turbo"
+api_key = "your-api-key"
+base_url = "https://api.openai.com/v1/chat/completions"
 max_tokens = 8192
 temperature = 0.2
 
 [chunking]
-chunk_size = 200  # Number of words per chunk
-overlap = 20      # Number of words to overlap between chunks
+chunk_size = 500
+overlap = 50
 
 [standardization]
-enabled = true            # Enable entity standardization
-use_llm_for_entities = true  # Use LLM for additional entity resolution
+enabled = true
 
 [inference]
-enabled = true             # Enable relationship inference
-use_llm_for_inference = true  # Use LLM for relationship inference
-apply_transitive = true    # Apply transitive inference rules
+enabled = true
 ```
 
 ## Command Line Options
 
-- `--input FILE`: Input text file to process
-- `--output FILE`: Output HTML file for visualization (default: knowledge_graph.html)
-- `--config FILE`: Path to config file (default: config.toml)
-- `--debug`: Enable debug output with raw LLM responses
-- `--no-standardize`: Disable entity standardization
-- `--no-inference`: Disable relationship inference
-- `--test`: Generate sample visualization using test data
-
-### Usage message (--help)
-
+### Main Pipeline
 ```bash
-generate-graph --help
-usage: generate-graph [-h] [--test] [--config CONFIG] [--output OUTPUT] [--input INPUT] [--debug] [--no-standardize] [--no-inference]
+python src/main.py [OPTIONS]
 
-Knowledge Graph Generator and Visualizer
-
-options:
-  -h, --help        show this help message and exit
-  --test            Generate a test visualization with sample data
-  --config CONFIG   Path to configuration file
-  --output OUTPUT   Output HTML file path
-  --input INPUT     Path to input text file (required unless --test is used)
-  --debug           Enable debug output (raw LLM responses and extracted JSON)
-  --no-standardize  Disable entity standardization
-  --no-inference    Disable relationship inference
+Options:
+  --query TEXT          Search query for PubMed
+  --output_folder PATH  Output directory (default: ./data2)
+  --config_path PATH    Configuration file path (default: ./config.toml)
 ```
+
+### Knowledge Graph Builder Only
+```bash
+python src/knowledge_graph_builder/main.py [OPTIONS]
+
+Options:
+  --input PATH          Input folder with text files
+  --output PATH         Output directory
+  --config PATH         Configuration file
+  --debug              Enable debug output
+  --no-standardize     Disable entity standardization
+  --no-inference       Disable relationship inference
+```
+
+## Output Files
+
+The system generates several output formats:
+
+- **CSV Files**: Search results and download logs
+- **JSON Files**: Structured triple data for programmatic access
+- **HTML Files**: Interactive knowledge graph visualizations
+- **SQLite Database**: Article metadata and search history
 
 ## How It Works
 
-1. **Chunking**: The document is split into overlapping chunks to fit within the LLM's context window
-2. **First Pass - SPO Extraction**: 
-   - Each chunk is processed by the LLM to extract Subject-Predicate-Object triplets
-   - Implemented in the `process_with_llm` function
-   - The LLM identifies entities and their relationships within each text segment
-   - Results are collected across all chunks to form the initial knowledge graph
-3. **Second Pass - Entity Standardization**:
-   - Basic standardization through text normalization
-   - Optional LLM-assisted entity alignment (controlled by `standardization.use_llm_for_entities` config)
-   - When enabled, the LLM reviews all unique entities from the graph and identifies groups that refer to the same concept
-   - This resolves cases where the same entity appears differently across chunks (e.g., "AI", "artificial intelligence", "AI system")
-   - Standardization helps create a more coherent and navigable knowledge graph
-4. **Third Pass - Relationship Inference**:
-   - Automatic inference of transitive relationships
-   - Optional LLM-assisted inference between disconnected graph components (controlled by `inference.use_llm_for_inference` config)
-   - When enabled, the LLM analyzes representative entities from disconnected communities and infers plausible relationships
-   - This reduces graph fragmentation by adding logical connections not explicitly stated in the text
-   - Both rule-based and LLM-based inference methods work together to create a more comprehensive graph
-5. **Visualization**: An interactive HTML visualization is generated using the PyVis library
+### Three-Phase Processing Pipeline
 
-Both the second and third passes are optional and can be disabled in the configuration to minimize LLM usage or control these processes manually.
+1. **Initial Triple Extraction**: [8](#0-7) 
+   - Text is chunked with overlap to maintain context
+   - Each chunk is processed by LLM to extract SPO triples
+   - Results are validated and filtered for completeness
 
-## Visualization Features
+2. **Entity Standardization** (Optional): [3](#0-2) 
+   - Consolidates similar entities across chunks
+   - Resolves naming variations and synonyms
+   - Creates more coherent knowledge representation
 
-- **Color-coded Communities**: Node colors represent different communities
-- **Node Size**: Nodes sized by importance (degree, betweenness, eigenvector centrality)
-- **Relationship Types**: Original relationships shown as solid lines, inferred relationships as dashed lines
-- **Interactive Controls**: Zoom, pan, hover for details, filtering and physics controls
-- **Light (default) and Dark mode themes**.
+3. **Relationship Inference** (Optional): [4](#0-3) 
+   - Discovers additional relationships between entities
+   - Reduces graph fragmentation
+   - Enhances knowledge connectivity
 
-## Project Layout
+## Project Structure
 
 ```
-.
-├── config.toml                     # Main configuration file for the system
-├── generate-graph.py               # Entry point when run directly as a script
-├── pyproject.toml                  # Python project metadata and build configuration
-├── requirements.txt                # Python dependencies
-└── src/                            # Source code
-    ├── generate_graph.py           # Main entry point script when run as a module
-    └── knowledge_graph/            # Core package
-        ├── __init__.py             # Package initialization
-        ├── config.py               # Configuration loading and validation
-        ├── entity_standardization.py # Entity standardization algorithms
-        ├── llm.py                  # LLM interaction and response processing
-        ├── main.py                 # Main program flow and orchestration
-        ├── prompts.py              # Centralized collection of LLM prompts
-        ├── text_utils.py           # Text processing and chunking utilities
-        ├── visualization.py        # Knowledge graph visualization generator
-        └── templates/              # HTML templates for visualization
-            └── graph_template.html # Base template for interactive graph
+├── src/
+│   ├── main.py                     # Main pipeline orchestrator
+│   ├── data_pipeline/              # PubMed data retrieval system
+│   │   ├── main.py                 # Data pipeline entry point
+│   │   ├── pubmed/                 # PubMed API integration
+│   │   └── utils/                  # Database and utility functions
+│   └── knowledge_graph_builder/    # Knowledge graph construction system
+│       ├── main.py                 # Knowledge graph builder entry point
+│       ├── llm.py                  # LLM integration and processing
+│       ├── visualization.py        # Interactive graph generation
+│       ├── entity_standardization.py # Entity processing algorithms
+│       └── templates/              # HTML visualization templates
+├── config.toml                     # System configuration
+└── requirements.txt                # Python dependencies
 ```
+
+## License
+
+This project is licensed under the MIT License.
+
+## Notes
+
+The system is specifically designed for scientific literature analysis and uses domain-specific prompts for medical and research contexts. The two-stage architecture allows for independent scaling of data acquisition and knowledge processing components. All LLM processing is configurable and supports multiple providers through OpenAI-compatible APIs.
+
+Wiki pages you might want to explore:
+- [Overview (koolgax99/llm-knowledge-graph-builder)](/wiki/koolgax99/llm-knowledge-graph-builder#1)
+- [System Architecture (koolgax99/llm-knowledge-graph-builder)](/wiki/koolgax99/llm-knowledge-graph-builder#1.2)
+- [Knowledge Graph Builder System (koolgax99/llm-knowledge-graph-builder)](/wiki/koolgax99/llm-knowledge-graph-builder#3)
