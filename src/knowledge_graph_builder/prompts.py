@@ -204,6 +204,7 @@ You are an expert in entity resolution and knowledge representation.
 Your task is to standardize entity names from a knowledge graph to ensure consistency.
 """
 
+
 def get_entity_resolution_user_prompt(entity_list):
     return f"""
 Below is a list of entity names extracted from a knowledge graph. 
@@ -223,11 +224,13 @@ Format your response as valid JSON like this:
 }}
 """
 
+
 # Phase 3: Community relationship inference prompts
 RELATIONSHIP_INFERENCE_SYSTEM_PROMPT = """
 You are an expert in knowledge representation and inference. 
 Your task is to infer plausible relationships between disconnected entities in a knowledge graph.
 """
+
 
 def get_relationship_inference_user_prompt(entities1, entities2, triples_text):
     return f"""
@@ -257,11 +260,13 @@ For predicates, use short phrases that clearly describe the relationship.
 IMPORTANT: Make sure the subject and object are different entities - avoid self-references.
 """
 
+
 # Phase 4: Within-community relationship inference prompts
 WITHIN_COMMUNITY_INFERENCE_SYSTEM_PROMPT = """
 You are an expert in knowledge representation and inference. 
 Your task is to infer plausible relationships between semantically related entities that are not yet connected in a knowledge graph.
 """
+
 
 def get_within_community_inference_user_prompt(pairs_text, triples_text):
     return f"""
@@ -288,4 +293,4 @@ Return your answer as a JSON array of triples in the following format:
 Only include highly plausible relationships with clear predicates.
 IMPORTANT: The inferred relationships (predicates) MUST be no more than 3 words maximum. Preferably 1-2 words. Never more than 3.
 IMPORTANT: Make sure that the subject and object are different entities - avoid self-references.
-""" 
+"""

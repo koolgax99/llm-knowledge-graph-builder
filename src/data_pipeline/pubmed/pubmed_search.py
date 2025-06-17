@@ -27,7 +27,9 @@ if PUBMED_API_KEY:
     Entrez.api_key = PUBMED_API_KEY
 
 
-def run_pubmed_search(search_term: str, min_year: int, max_year: int, ret_max: int = 250) -> List[Dict]:
+def run_pubmed_search(
+    search_term: str, min_year: int, max_year: int, ret_max: int = 250
+) -> List[Dict]:
     """
     Execute a PubMed search using the provided search term (or MeSH strategy) and date range.
     Retrieve up to 250 articles sorted by relevance.
@@ -42,8 +44,7 @@ def run_pubmed_search(search_term: str, min_year: int, max_year: int, ret_max: i
 
     try:
         # Use Entrez.esearch to get a list of PubMed IDs (up to 250).
-        handle = Entrez.esearch(db="pubmed", term=query,
-                                retmax=ret_max, idtype="acc")
+        handle = Entrez.esearch(db="pubmed", term=query, retmax=ret_max, idtype="acc")
         search_results = Entrez.read(handle)
         handle.close()
         id_list = search_results.get("IdList", [])
@@ -63,8 +64,7 @@ def run_pubmed_search(search_term: str, min_year: int, max_year: int, ret_max: i
             for start in range(0, len(id_list), batch_size):
                 end = min(start + batch_size, len(id_list))
                 batch_ids = id_list[start:end]
-                fetch_handle = Entrez.efetch(
-                    db="pubmed", id=batch_ids, retmode="xml")
+                fetch_handle = Entrez.efetch(db="pubmed", id=batch_ids, retmode="xml")
                 data = fetch_handle.read()
                 fetch_handle.close()
                 # Parse XML to extract article details.
@@ -100,8 +100,9 @@ def parse_article(article_xml) -> dict:
     for abstract in article_xml.findall(".//AbstractText"):
         if abstract.text:
             abstract_texts.append(abstract.text.strip())
-    article_data["Abstract"] = " ".join(
-        abstract_texts) if abstract_texts else "No Abstract"
+    article_data["Abstract"] = (
+        " ".join(abstract_texts) if abstract_texts else "No Abstract"
+    )
 
     # Extract Authors.
     authors_list = []
@@ -110,8 +111,7 @@ def parse_article(article_xml) -> dict:
         fore_name = author.find("ForeName")
         if last_name is not None and fore_name is not None:
             authors_list.append(f"{fore_name.text} {last_name.text}")
-    article_data["Authors"] = ", ".join(
-        authors_list) if authors_list else "No Authors"
+    article_data["Authors"] = ", ".join(authors_list) if authors_list else "No Authors"
 
     # Extract DOI.
     doi = "N/A"
@@ -138,10 +138,8 @@ def parse_article(article_xml) -> dict:
 
     return article_data
 
+
 if __name__ == "__main__":
     result = run_pubmed_search(
-        search_term="Small Cell Lung Cancer",
-        min_year=2010,
-        max_year=2025,
-        ret_max=500
+        search_term="Small Cell Lung Cancer", min_year=2010, max_year=2025, ret_max=500
     )

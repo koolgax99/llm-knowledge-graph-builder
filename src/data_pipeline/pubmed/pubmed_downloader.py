@@ -36,52 +36,53 @@ if PUBMED_API_KEY:
 
 def check_full_text_availability(pmid: str) -> Tuple[bool, Optional[str]]:
     """Check if full text is available in PMC and get PMC ID if it exists.
-    
+
     Args:
         pmid: PubMed ID of the article
-        
+
     Returns:
         Tuple of (availability boolean, PMC ID if available)
     """
     try:
         print(f"Checking PMC availability for PMID {pmid}")
         handle = Entrez.elink(dbfrom="pubmed", db="pmc", id=pmid)
-        
+
         if not handle:
             print(f"No PMC link found for PMID {pmid}")
             return False, None
-            
+
         xml_content = handle.read()
         handle.close()
-        
+
         # Parse XML to get PMC ID
         root = ET.fromstring(xml_content)
         linksetdb = root.find(".//LinkSetDb")
         if linksetdb is None:
             print(f"No PMC ID found for PMID {pmid}")
             return False, None
-            
+
         id_elem = linksetdb.find(".//Id")
         if id_elem is None:
             print(f"No PMC ID element found for PMID {pmid}")
             return False, None
-            
+
         pmc_id = id_elem.text
         print(f"Found PMC ID {pmc_id} for PMID {pmid}")
         return True, pmc_id
-        
+
     except Exception as e:
         print(f"Error checking PMC availability for PMID {pmid}: {str(e)}")
         return False, None
 
+
 def get_full_text(pmid: str) -> Optional[str]:
     """Get full text of the article if available through PMC.
-    
+
     Handles truncated responses by making additional requests.
-    
+
     Args:
         pmid: PubMed ID of the article
-        
+
     Returns:
         Full text content if available, None otherwise
     """
@@ -95,40 +96,36 @@ def get_full_text(pmid: str) -> Optional[str]:
         print(f"Fetching full text for PMC ID {pmc_id}")
         content = ""
         retstart = 0
-        
+
         while True:
             full_text_handle = Entrez.efetch(
-                db="pmc", 
-                id=pmc_id, 
-                rettype="xml",
-                retstart=retstart
+                db="pmc", id=pmc_id, rettype="xml", retstart=retstart
             )
-            
+
             if not full_text_handle:
                 break
-                
+
             chunk = full_text_handle.read()
             full_text_handle.close()
-            
+
             if isinstance(chunk, bytes):
-                chunk = chunk.decode('utf-8')
-            
+                chunk = chunk.decode("utf-8")
+
             content += chunk
-            
+
             # Check if there might be more content
             if "[truncated]" not in chunk and "Result too long" not in chunk:
                 break
-                
+
             # Increment retstart for next chunk
             retstart += len(chunk)
-            
+
             # Add small delay to respect API rate limits
             time.sleep(0.5)
-        
 
-        result  = extract_text(content)
+        result = extract_text(content)
         return result
-        
+
     except Exception as e:
         print(f"Error getting full text for PMID {pmid}: {str(e)}")
         return None
@@ -139,13 +136,25 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser._optionals.title = "Flag Arguments"
     parser.add_argument(
-        '-pmids', help="Comma separated list of pmids to fetch. Must include -pmids or -pmf.", default='%#$')
+        "-pmids",
+        help="Comma separated list of pmids to fetch. Must include -pmids or -pmf.",
+        default="%#$",
+    )
     parser.add_argument(
-        '-csv', help="File with pmids to fetch inside, one pmid per line. Optionally, the file can be a tsv with a second column of names to save each pmid's article with (without '.pdf' at the end). Must include -pmids or -pmf", default='%#$')
+        "-csv",
+        help="File with pmids to fetch inside, one pmid per line. Optionally, the file can be a tsv with a second column of names to save each pmid's article with (without '.pdf' at the end). Must include -pmids or -pmf",
+        default="%#$",
+    )
     parser.add_argument(
-        '-out', help="Output directory for fetched articles. Default: fetched_pdfs", default="fetched_pdfs")
+        "-out",
+        help="Output directory for fetched articles. Default: fetched_pdfs",
+        default="fetched_pdfs",
+    )
     parser.add_argument(
-        '-errors', help="Output file path for pmids which failed to fetch. Default: unfetched_pmids.tsv", default="unfetched_pmids.tsv")
+        "-errors",
+        help="Output file path for pmids which failed to fetch. Default: unfetched_pmids.tsv",
+        default="unfetched_pmids.tsv",
+    )
 
     args = vars(parser.parse_args())
 
@@ -154,13 +163,13 @@ def parse_arguments():
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    if args['pmids'] == '%#$' and args['csv'] == '%#$':
+    if args["pmids"] == "%#$" and args["csv"] == "%#$":
         print("Error: Either -pmids or -pmf must be used. Exiting.")
         sys.exit(1)
 
-    if args['pmids'] != '%#$' and args['csv'] != '%#$':
+    if args["pmids"] != "%#$" and args["csv"] != "%#$":
         print("Error: -pmids and -pmf cannot be used together. Ignoring -pmf argument")
-        args['pmf'] = '%#$'
+        args["pmf"] = "%#$"
 
     return args
 
@@ -169,38 +178,40 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
     """Main execution function."""
     # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
-        print(
-            f"Output directory of {output_dir} did not exist. Created the directory.")
+        print(f"Output directory of {output_dir} did not exist. Created the directory.")
         os.mkdir(output_dir)
 
     df = pd.read_csv(input_csv_file)
-    pmids = df['PMID'].tolist()
-    names = df['Title'].tolist()
+    pmids = df["PMID"].tolist()
+    names = df["Title"].tolist()
     names = [str(name) for name in names]  # Ensure all names are strings
 
-    names = [name.replace(" ", "_").replace(" ", "_").replace(".", "_").replace("/", "_") for name in names]
+    names = [
+        name.replace(" ", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
+        for name in names
+    ]
 
     # Process each PMID
     errors = []
     for pmid, name in zip(pmids, names):
         print(f"Trying to fetch pmid {pmid}")
-        
+
         try:
             output = get_full_text(str(pmid))
             if output:
                 # Save the full text to a file
                 filepath = os.path.join(output_dir, f"{name}.txt")
-                with open(filepath, 'w', encoding='utf-8') as f:
+                with open(filepath, "w", encoding="utf-8") as f:
                     f.write(output)
                 print(f"** fetching of reprint {pmid} succeeded")
             else:
                 print(f"** fetching of reprint {pmid} failed, no full text available")
-                errors.append({'pmid': pmid, 'name': name})
+                errors.append({"pmid": pmid, "name": name})
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 print(f"** fetching of reprint {pmid} failed, article not found")
-                errors.append({'pmid': pmid, 'name': name})
-        
+                errors.append({"pmid": pmid, "name": name})
+
     # Write errors to CSV
     if errors:
         pd.DataFrame(errors).to_csv(errors_csv_file, index=False, header=False)
@@ -208,4 +219,4 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    run_pubmed_downloader(args['out'], args['csv'], args['errors'])
+    run_pubmed_downloader(args["out"], args["csv"], args["errors"])

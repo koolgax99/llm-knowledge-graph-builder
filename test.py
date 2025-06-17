@@ -1,4 +1,5 @@
 from Bio import Entrez
+
 Entrez.email = "sanda.n@northeastern.edu"
 Entrez.api_key = "017fc6d872ddd63d8eb3fee095c352283309"
 handle = Entrez.esearch(db="pubmed", retmax=250, term="SCLC", idtype="acc")
@@ -38,5 +39,3 @@ print(id_list)
 # # Save the markdown output to a file "text.md"
 # with open("text.md", "w") as md_file:
 #     md_file.write(text)
-
-

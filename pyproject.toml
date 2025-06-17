@@ -8,10 +8,8 @@ requires-python = ">=3.12"
 dependencies = [
     "networkx>=3.4.2",
     "pyvis>=0.3.2",
-    "pyvis-network>=0.0.6",
     "requests>=2.32.3",
     "tomli>=2.2.1",
-    "python-louvain>=0.16"
 ]
 
 [build-system]
@@ -19,7 +17,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-generate-graph = "src.knowledge_graph.main:main"
+generate-graph = "src:main"
 
 [tool.setuptools]
 package-dir = {"" = "."}
+
+[tool.ruff]
+line-length = 88  # Set the maximum line length
+select = ["E", "F", "W"]  # Enable specific linting rules
+ignore = []  # Add rules to ignore if needed

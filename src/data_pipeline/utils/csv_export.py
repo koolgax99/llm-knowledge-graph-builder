@@ -6,6 +6,7 @@ import os
 import pandas as pd
 from .database import SearchResult
 
+
 def check_filename(filename):
     """
     Check if the filename is valid.
@@ -20,7 +21,7 @@ def check_filename(filename):
     """
     if not filename:
         raise ValueError("Filename cannot be empty.")
-    
+
     if not filename.endswith(".csv"):
         filename += ".csv"
 
@@ -35,6 +36,7 @@ def check_filename(filename):
 
     return filename
 
+
 def export_to_csv(session, metadata_id, search_filename="output.csv"):
     """
     Export search results and metadata to an Excel file with two sheets.
@@ -42,20 +44,26 @@ def export_to_csv(session, metadata_id, search_filename="output.csv"):
     Sheet2: Metadata
     """
     # Retrieve data from database
-    results = session.query(SearchResult).filter(SearchResult.metadata_id == metadata_id).all()
+    results = (
+        session.query(SearchResult)
+        .filter(SearchResult.metadata_id == metadata_id)
+        .all()
+    )
 
     # Create DataFrame for search results
     results_data = []
     for result in results:
-        results_data.append({
-            "PMID": result.pmid,
-            "Title": result.title,
-            "Authors": result.authors,
-            "Abstract": result.abstract,
-            "DOI": result.doi,
-            "Link": result.link,
-            "Year": result.year
-        })
+        results_data.append(
+            {
+                "PMID": result.pmid,
+                "Title": result.title,
+                "Authors": result.authors,
+                "Abstract": result.abstract,
+                "DOI": result.doi,
+                "Link": result.link,
+                "Year": result.year,
+            }
+        )
     df_results = pd.DataFrame(results_data)
 
     # Check the filename

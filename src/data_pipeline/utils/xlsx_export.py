@@ -5,7 +5,8 @@ xlsx_export.py: Contains functions to export the search results and metadata to 
 import os
 import pandas as pd
 from datetime import datetime
-from src.utils.database import SearchResult, Metadata
+from .database import SearchResult, Metadata
+
 
 def check_filename(filename):
     """
@@ -39,6 +40,7 @@ def check_filename(filename):
 
     return filename
 
+
 def export_to_excel(session, metadata_id, filename="output.xlsx"):
     """
     Export search results and metadata to an Excel file with two sheets.
@@ -46,21 +48,27 @@ def export_to_excel(session, metadata_id, filename="output.xlsx"):
     Sheet2: Metadata
     """
     # Retrieve data from database
-    results = session.query(SearchResult).filter(SearchResult.metadata_id == metadata_id).all()
+    results = (
+        session.query(SearchResult)
+        .filter(SearchResult.metadata_id == metadata_id)
+        .all()
+    )
     metadata = session.query(Metadata).filter(Metadata.id == metadata_id).first()
 
     # Create DataFrame for search results
     results_data = []
     for result in results:
-        results_data.append({
-            "PMID": result.pmid,
-            "Title": result.title,
-            "Authors": result.authors,
-            "Abstract": result.abstract,
-            "DOI": result.doi,
-            "Link": result.link,
-            "Year": result.year
-        })
+        results_data.append(
+            {
+                "PMID": result.pmid,
+                "Title": result.title,
+                "Authors": result.authors,
+                "Abstract": result.abstract,
+                "DOI": result.doi,
+                "Link": result.link,
+                "Year": result.year,
+            }
+        )
     df_results = pd.DataFrame(results_data)
 
     # Create DataFrame for metadata
@@ -69,7 +77,7 @@ def export_to_excel(session, metadata_id, filename="output.xlsx"):
         "max_year": [metadata.max_year],
         "research_purpose": [metadata.research_purpose],
         "mesh_strategy": [metadata.mesh_strategy],
-        "export_date": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+        "export_date": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
     }
     df_metadata = pd.DataFrame(metadata_data)
 
