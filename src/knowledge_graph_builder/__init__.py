@@ -4,7 +4,7 @@ Knowledge Graph Generator and Visualizer.
 A tool that takes text input and generates an interactive knowledge graph visualization.
 """
 
-__all__ = ['utils', 'visualization', 'main', 'config', 'llm', 'prompts', 'text_utils']
+__all__ = ["utils", "visualization", "main", "config", "llm", "prompts", "text_utils"]
 
 from . import utils
 from . import visualization
