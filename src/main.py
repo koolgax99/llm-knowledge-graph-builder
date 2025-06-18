@@ -29,7 +29,7 @@ def main(query, output_folder, config_path="./config.toml"):
     # Build the knowledge graph
     main_kg_builder(
         input_path=pdf_download_folder,
-        output_folder=output_folder,
+        output_dir=output_folder,
         config_path=config_path,
     )
 
