@@ -32,7 +32,7 @@ def main_data_pipeline(
     max_year=None,
     experiment_name=None,
     output_folder=None,
-    max_results=None
+    max_results=None,
 ):
     """
     Process a PubMed search request with the given parameters.

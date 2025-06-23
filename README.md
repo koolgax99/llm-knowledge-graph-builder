@@ -61,6 +61,27 @@ This will:
 3. Extract knowledge graphs using LLM analysis
 4. Generate interactive HTML visualizations
 
+## Running via Docker
+
+To run the application using Docker:
+
+1. **Build the Docker Image**:
+   ```bash
+   docker build -t ai-knowledge-graph .
+   ```
+   This will create a Docker image named `ai-knowledge-graph`.
+
+2. **Run the Docker Container**:
+   ```bash
+   docker run -it --rm -v $(pwd):/app ai-knowledge-graph bash
+   ```
+   This command:
+   - Starts the container.
+   - Removes the container after execution (`--rm`).
+   - Opens a bash, allowing to run the main file in there. 
+
+Ensure that your `.env` file is properly configured and placed in the project directory before running the container.
+
 ## System Architecture
 
 The system implements a two-stage pipeline architecture: [6](#0-5) 

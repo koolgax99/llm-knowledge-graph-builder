@@ -18,14 +18,18 @@ def main(query, max_results, output_folder=None, config_path="./config.toml"):
         output_folder (str): The folder where the output files will be saved.
     """
     if output_folder is None:
-        output_folder = os.path.abspath(os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "..", "output"))
+        output_folder = os.path.abspath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "output")
+        )
 
     experiment_name = "pubmed_" + query.replace(" ", "_").lower()
 
     # Run the data pipeline
     results = main_data_pipeline(
-        user_query=query, experiment_name=experiment_name, output_folder=output_folder, max_results=max_results
+        user_query=query,
+        experiment_name=experiment_name,
+        output_folder=output_folder,
+        max_results=max_results,
     )
 
     pdf_download_folder = results.get("pdf_download_folder", None)
@@ -45,7 +49,12 @@ if __name__ == "__main__":
         description="Run the data pipeline and knowledge graph builder."
     )
     parser.add_argument("--query", type=str, help="The query string to be processed.")
-    parser.add_argument("--max_results", type=int, default=20, help="The maximum number of results to return.")
+    parser.add_argument(
+        "--max_results",
+        type=int,
+        default=20,
+        help="The maximum number of results to return.",
+    )
     parser.add_argument(
         "--output_folder",
         type=str,
