@@ -32,6 +32,7 @@ def main_data_pipeline(
     max_year=None,
     experiment_name=None,
     output_folder=None,
+    max_results=None
 ):
     """
     Process a PubMed search request with the given parameters.
@@ -69,7 +70,7 @@ def main_data_pipeline(
     # Execute PubMed search
     logging.info("Executing PubMed search...")
     search_results, final_query = run_pubmed_search(
-        user_query, min_year, max_year, ret_max=250
+        user_query, min_year, max_year, ret_max=max_results
     )
     logging.info("Retrieved %d search results", len(search_results))
 

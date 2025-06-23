@@ -28,11 +28,10 @@ def check_filename(filename):
     if not os.path.splitext(filename)[1]:
         filename += ".csv"
 
-    if not os.path.exists("data"):
-        os.makedirs("data")
-
-    if not filename.startswith("data"):
-        filename = os.path.join("data", filename)
+    # check if folder exists for filename
+    folder = os.path.dirname(filename)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
     return filename
 

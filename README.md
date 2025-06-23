@@ -52,7 +52,7 @@ temperature = 0.2
 Run the complete pipeline with a single command: [5](#0-4) 
 
 ```bash
-python src/main.py --query "machine learning in healthcare" --output_folder ./output
+python src/main.py --query "machine learning in healthcare" --output_folder ./output --max_results 20
 ```
 
 This will:
