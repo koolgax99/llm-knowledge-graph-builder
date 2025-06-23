@@ -23,6 +23,7 @@ def main(query, max_results, output_folder=None, config_path="./config.toml"):
         )
 
     experiment_name = "pubmed_" + query.replace(" ", "_").lower()
+    experiment_name = experiment_name.replace("(", "").replace(")", "").replace(",", "_")
 
     # Run the data pipeline
     results = main_data_pipeline(

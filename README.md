@@ -74,6 +74,8 @@ To run the application using Docker:
 2. **Run the Docker Container**:
    ```bash
    docker run -it --rm -v $(pwd):/app ai-knowledge-graph bash
+   OR 
+   docker run -it --rm --user $(id -u):$(id -g) -v $(pwd):/app ai-knowledge-graph bash
    ```
    This command:
    - Starts the container.

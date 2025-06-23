@@ -301,6 +301,7 @@ def main_kg_builder(
     input_path,
     output_dir,
     config_path="config.toml",
+    experiment_name=None,
     debug=False,
     no_standardize=False,
     no_inference=False,
@@ -335,7 +336,7 @@ def main_kg_builder(
 
     # Folder processing
     input_folder = input_path
-    output_folder = os.path.join(os.path.dirname(output_dir), "json_outputs")
+    output_folder = os.path.join(output_dir, f"{experiment_name}_json_outputs")
     os.makedirs(output_folder, exist_ok=True)
     input_files = os.listdir(input_folder)
 
@@ -346,6 +347,10 @@ def main_kg_builder(
             output_file = os.path.join(
                 output_folder, f"{os.path.splitext(file_name)[0]}.json"
             )
+            if output_file in os.listdir(output_folder):
+                print(f"Skipping {output_file} as it already exists")
+                continue
+            
             result = process_file(config, input_file, output_file, debug)
             if result:
                 # Visualize the combined knowledge graph
