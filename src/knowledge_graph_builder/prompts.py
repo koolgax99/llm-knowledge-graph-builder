@@ -115,6 +115,7 @@ Your task: Read the research paper on Lupus (delimited by triple backticks) and 
 Follow these rules carefully:
 
 Focus on Medical Related Knowledge: Extract triplets related to SCLC / Neuroendocrines / Small cell lung cancer mechanisms, symptoms, treatments, diagnosis, and related medical concepts only. You can also extract triplets related to something that is indirectly related to SCLC, with third order or fourth order relationships.
+Also, Focus on any gene related to SCLC, such as TP53, RB1, MYC, etc and extract triplets related to these genes and their role in SCLC.
 Focus on SCLC and Food: Extract triplets related to SCLC and how various foods, diet, chemicals affect progression.
 Exclude Metadata: Do not create triplets about authors, institutions, publication details, or citation information.
 Entity Consistency: Use consistent names for medical entities throughout. For example, if "Small Cell Lung Cancer" is also mentioned as "SCLC", use the most complete form consistently in all triples.
