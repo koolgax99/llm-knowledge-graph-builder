@@ -267,7 +267,10 @@ def process_file(config, input_file, output_file, debug=False):
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             input_text = f.read()
+        
+        print("=" * 50)
         print(f"Processing file: {input_file}")
+        print("=" * 50)
     except Exception as e:
         print(f"Error reading input file {input_file}: {e}")
         return None
@@ -340,8 +343,12 @@ def main_kg_builder(
     os.makedirs(output_folder, exist_ok=True)
     input_files = os.listdir(input_folder)
 
-    for file_name in input_files:
-        print(f"Processing file: {file_name}")
+    for index, file_name in enumerate(input_files):
+        
+        print("=" * 50)
+        print(f"Processing file {index + 1}/{len(input_files)}: {file_name}")
+        print("=" * 50)
+
         if file_name.endswith(".txt"):
             input_file = os.path.join(input_folder, file_name)
             output_file = os.path.join(
