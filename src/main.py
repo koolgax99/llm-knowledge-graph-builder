@@ -35,11 +35,14 @@ def main(query, max_results, output_folder=None, config_path="./config.toml"):
 
     pdf_download_folder = results.get("pdf_download_folder", None)
 
+    pdf_download_folder = os.path.join(output_folder, f"{experiment_name}_pubmed_downloads")
+
     # Build the knowledge graph
     main_kg_builder(
         input_path=pdf_download_folder,
         output_dir=output_folder,
         config_path=config_path,
+        experiment_name=experiment_name
     )
 
 

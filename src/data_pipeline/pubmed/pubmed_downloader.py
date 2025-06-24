@@ -191,8 +191,12 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
         for name in names
     ]
 
+    # Initialize errors CSV file with header if it doesn't exist
+    if not os.path.exists(errors_csv_file):
+        with open(errors_csv_file, 'w') as f:
+            f.write("pmid,name\n")
+
     # Process each PMID
-    errors = []
     for pmid, name in zip(pmids, names):
         print(f"Trying to fetch pmid {pmid}")
 
@@ -206,15 +210,20 @@ def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
                 print(f"** fetching of reprint {pmid} succeeded")
             else:
                 print(f"** fetching of reprint {pmid} failed, no full text available")
-                errors.append({"pmid": pmid, "name": name})
+                # Write error immediately to CSV
+                with open(errors_csv_file, 'a') as f:
+                    f.write(f"{pmid},{name}\n")
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 print(f"** fetching of reprint {pmid} failed, article not found")
-                errors.append({"pmid": pmid, "name": name})
-
-    # Write errors to CSV
-    if errors:
-        pd.DataFrame(errors).to_csv(errors_csv_file, index=False, header=False)
+                # Write error immediately to CSV
+                with open(errors_csv_file, 'a') as f:
+                    f.write(f"{pmid},{name}\n")
+        except Exception as e:
+            print(f"** fetching of reprint {pmid} failed with error: {str(e)}")
+            # Write error immediately to CSV
+            with open(errors_csv_file, 'a') as f:
+                f.write(f"{pmid},{name}\n")
 
 
 if __name__ == "__main__":

@@ -284,14 +284,7 @@ def process_file(config, input_file, output_file, debug=False):
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(result, f, indent=2)
 
-            # also save the raw data to txt file
-            raw_output_file = output_file.replace(".json", ".txt")
-            with open(raw_output_file, "w", encoding="utf-8") as f:
-                for item in result:
-                    # save result directly but without indentation for raw text
-                    f.write(result + "\n")
             print(f"Saved processed triples to {output_file}")
-            print(f"Saved raw knowledge graph data to {raw_output_file}")
         except Exception as e:
             print(f"Warning: Could not save raw data to {output_file}: {e}")
         return result
@@ -388,6 +381,12 @@ if __name__ == "__main__":
         "--config", "-c", default="config.toml", help="Path to configuration file"
     )
     parser.add_argument(
+        "--experiment_name",
+        "-e",
+        default="knowledge_graph_experiment",
+        help="Name of the experiment for output files",
+    )
+    parser.add_argument(
         "--debug", "-d", action="store_true", help="Enable debug output"
     )
     parser.add_argument(
@@ -402,6 +401,7 @@ if __name__ == "__main__":
         args.input,
         args.output,
         config_path=args.config,
+        experiment_name=args.experiment_name,
         debug=args.debug,
         no_standardize=args.no_standardize,
         no_inference=args.no_inference,
