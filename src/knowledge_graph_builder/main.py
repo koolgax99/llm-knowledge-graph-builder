@@ -344,26 +344,28 @@ def main_kg_builder(
 
         if file_name.endswith(".txt"):
             input_file = os.path.join(input_folder, file_name)
-            output_file = os.path.join(
-                output_folder, f"{os.path.splitext(file_name)[0]}.json"
+            output_file_name = f"{os.path.splitext(file_name)[0]}.json"
+            output_file_path = os.path.join(
+                output_folder, output_file_name
             )
-            if output_file in os.listdir(output_folder):
-                print(f"Skipping {output_file} as it already exists")
-                continue
             
-            result = process_file(config, input_file, output_file, debug)
-            if result:
-                # Visualize the combined knowledge graph
-                output_file = output_file.replace(".json", ".html")
-                stats = visualize_knowledge_graph(result, output_file, config=config)
-                print("\nKnowledge Graph Statistics:")
-                print(f"Nodes: {stats['nodes']}")
-                print(f"Edges: {stats['edges']}")
-                print(f"Communities: {stats['communities']}")
-                print(
-                    "\nTo view the visualization, open the following file in your browser:"
-                )
-                print(f"file://{os.path.abspath(output_file)}")
+            if output_file_name in os.listdir(output_folder):
+                print(f"Skipping {output_file_name} as it already exists")
+                continue
+            else:
+                result = process_file(config, input_file, output_file_path, debug)
+                if result:
+                    # Visualize the combined knowledge graph
+                    output_file = output_file_path.replace(".json", ".html")
+                    stats = visualize_knowledge_graph(result, output_file, config=config)
+                    print("\nKnowledge Graph Statistics:")
+                    print(f"Nodes: {stats['nodes']}")
+                    print(f"Edges: {stats['edges']}")
+                    print(f"Communities: {stats['communities']}")
+                    print(
+                        "\nTo view the visualization, open the following file in your browser:"
+                    )
+                    print(f"file://{os.path.abspath(output_file)}")
         else:
             print("No valid knowledge graphs were generated for this file")
 

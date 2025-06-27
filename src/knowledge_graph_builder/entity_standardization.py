@@ -80,11 +80,15 @@ def standardize_entities(triples, config):
         print("Error: No valid triples found for entity standardization")
         return []
 
-    # 1. Extract all unique entities
+    # 1. Extract all unique entities (FIXED: Added None checks)
     all_entities = set()
     for triple in valid_triples:
-        all_entities.add(triple["subject"].lower())
-        all_entities.add(triple["object"].lower())
+        subject = triple.get("subject")
+        object_ = triple.get("object")
+        
+        if subject and isinstance(subject, str) and object_ and isinstance(object_, str):
+            all_entities.add(subject.lower())
+            all_entities.add(object_.lower())
 
     # 2. Group similar entities - first by exact match after lowercasing and removing stopwords
     standardized_entities = {}
@@ -133,10 +137,14 @@ def standardize_entities(triples, config):
             # Sort by frequency in triples, then by length (shorter is better)
             variant_counts = defaultdict(int)
             for triple in valid_triples:
+                # FIXED: Added None checks
+                subject = triple.get("subject")
+                object_ = triple.get("object")
+                
                 for variant in variants:
-                    if triple["subject"].lower() == variant:
+                    if subject and subject.lower() == variant:
                         variant_counts[variant] += 1
-                    if triple["object"].lower() == variant:
+                    if object_ and object_.lower() == variant:
                         variant_counts[variant] += 1
 
             # Choose the most common variant as the standard form
@@ -191,19 +199,23 @@ def standardize_entities(triples, config):
     for entity, standard in additional_standardizations.items():
         standardized_entities[entity] = standard
 
-    # 5. Apply standardization to all triples
+    # 5. Apply standardization to all triples (FIXED: Added None checks)
     standardized_triples = []
     for triple in valid_triples:
-        subj_lower = triple["subject"].lower()
-        obj_lower = triple["object"].lower()
+        subject = triple.get("subject")
+        object_ = triple.get("object")
+        
+        if subject and object_:
+            subj_lower = subject.lower()
+            obj_lower = object_.lower()
 
-        standardized_triple = {
-            "subject": standardized_entities.get(subj_lower, triple["subject"]),
-            "predicate": limit_predicate_length(triple["predicate"]),
-            "object": standardized_entities.get(obj_lower, triple["object"]),
-            "chunk": triple.get("chunk", 0),
-        }
-        standardized_triples.append(standardized_triple)
+            standardized_triple = {
+                "subject": standardized_entities.get(subj_lower, subject),
+                "predicate": limit_predicate_length(triple.get("predicate", "")),
+                "object": standardized_entities.get(obj_lower, object_),
+                "chunk": triple.get("chunk", 0),
+            }
+            standardized_triples.append(standardized_triple)
 
     # 6. Optional: Use LLM to help with entity resolution for ambiguous cases
     if config.get("standardization", {}).get("use_llm_for_entities", False):
@@ -266,15 +278,16 @@ def infer_relationships(triples, config):
         print("Error: No valid triples found for relationship inference")
         return []
 
-    # Create a graph representation for easier traversal
+    # Create a graph representation for easier traversal (FIXED: Added None checks)
     graph = defaultdict(set)
     all_entities = set()
     for triple in valid_triples:
-        subj = triple["subject"]
-        obj = triple["object"]
-        graph[subj].add(obj)
-        all_entities.add(subj)
-        all_entities.add(obj)
+        subj = triple.get("subject")
+        obj = triple.get("object")
+        if subj and obj:
+            graph[subj].add(obj)
+            all_entities.add(subj)
+            all_entities.add(obj)
 
     # Find disconnected communities
     communities = _identify_communities(graph)
@@ -319,11 +332,11 @@ def infer_relationships(triples, config):
 
     # Final pass: ensure all predicates follow the 3-word limit
     for triple in unique_triples:
-        triple["predicate"] = limit_predicate_length(triple["predicate"])
+        triple["predicate"] = limit_predicate_length(triple.get("predicate", ""))
 
     # Filter out self-referencing triples
     filtered_triples = [
-        triple for triple in unique_triples if triple["subject"] != triple["object"]
+        triple for triple in unique_triples if triple.get("subject") != triple.get("object")
     ]
     if len(filtered_triples) < len(unique_triples):
         print(
@@ -389,11 +402,15 @@ def _apply_transitive_inference(triples, graph):
     """
     new_triples = []
 
-    # Predicates by subject-object pairs
+    # Predicates by subject-object pairs (FIXED: Added None checks)
     predicates = {}
     for triple in triples:
-        key = (triple["subject"], triple["object"])
-        predicates[key] = triple["predicate"]
+        subj = triple.get("subject")
+        obj = triple.get("object")
+        pred = triple.get("predicate")
+        if subj and obj and pred:
+            key = (subj, obj)
+            predicates[key] = pred
 
     # Find transitive relationships: A -> B -> C implies A -> C
     for subj in graph:
@@ -439,10 +456,16 @@ def _deduplicate_triples(triples):
     unique_triples = {}
 
     for triple in triples:
-        key = (triple["subject"], triple["predicate"], triple["object"])
-        # Keep original triples (not inferred) when duplicates exist
-        if key not in unique_triples or not triple.get("inferred", False):
-            unique_triples[key] = triple
+        # FIXED: Added None checks
+        subj = triple.get("subject")
+        pred = triple.get("predicate")
+        obj = triple.get("object")
+        
+        if subj and pred and obj:
+            key = (subj, pred, obj)
+            # Keep original triples (not inferred) when duplicates exist
+            if key not in unique_triples or not triple.get("inferred", False):
+                unique_triples[key] = triple
 
     return list(unique_triples.values())
 
@@ -458,19 +481,27 @@ def _resolve_entities_with_llm(triples, config):
     Returns:
         List of triples with LLM-assisted entity standardization
     """
-    # Extract all unique entities
+    # Extract all unique entities (FIXED: Added None checks)
     all_entities = set()
     for triple in triples:
-        all_entities.add(triple["subject"])
-        all_entities.add(triple["object"])
+        subj = triple.get("subject")
+        obj = triple.get("object")
+        if subj:
+            all_entities.add(subj)
+        if obj:
+            all_entities.add(obj)
 
     # If there are too many entities, limit to the most frequent ones
     if len(all_entities) > 100:
-        # Count entity occurrences
+        # Count entity occurrences (FIXED: Added None checks)
         entity_counts = defaultdict(int)
         for triple in triples:
-            entity_counts[triple["subject"]] += 1
-            entity_counts[triple["object"]] += 1
+            subj = triple.get("subject")
+            obj = triple.get("object")
+            if subj:
+                entity_counts[subj] += 1
+            if obj:
+                entity_counts[obj] += 1
 
         # Keep only the top 100 most frequent entities
         all_entities = {
@@ -493,9 +524,6 @@ def _resolve_entities_with_llm(triples, config):
         temperature = config["llm"]["temperature"]
         base_url = config["llm"]["base_url"]
 
-        # Call LLM
-        # response = call_llm(model, user_prompt, api_key, system_prompt, max_tokens, temperature, base_url)
-
         # Process with LLM
         metadata = {}
         response = call_openai(
@@ -517,14 +545,15 @@ def _resolve_entities_with_llm(triples, config):
                 # Also map the standard form to itself
                 entity_to_standard[standard] = standard
 
-            # Apply standardization to triples
+            # Apply standardization to triples (FIXED: Added None checks)
             for triple in triples:
-                triple["subject"] = entity_to_standard.get(
-                    triple["subject"], triple["subject"]
-                )
-                triple["object"] = entity_to_standard.get(
-                    triple["object"], triple["object"]
-                )
+                subj = triple.get("subject")
+                obj = triple.get("object")
+                
+                if subj:
+                    triple["subject"] = entity_to_standard.get(subj, subj)
+                if obj:
+                    triple["object"] = entity_to_standard.get(obj, obj)
 
             print(
                 f"Applied LLM-based entity standardization for {len(entity_mapping)} entity groups"
@@ -570,14 +599,13 @@ def _infer_relationships_with_llm(triples, communities, config):
             rep1 = list(comm1)[: min(5, len(comm1))]
             rep2 = list(comm2)[: min(5, len(comm2))]
 
-            # Prepare relevant existing triples for context
+            # Prepare relevant existing triples for context (FIXED: Added None checks)
             context_triples = []
             for triple in triples:
-                if (
-                    triple["subject"] in rep1
-                    or triple["subject"] in rep2
-                    or triple["object"] in rep1
-                    or triple["object"] in rep2
+                subj = triple.get("subject")
+                obj = triple.get("object")
+                if subj and obj and (
+                    subj in rep1 or subj in rep2 or obj in rep1 or obj in rep2
                 ):
                     context_triples.append(triple)
 
@@ -612,7 +640,6 @@ def _infer_relationships_with_llm(triples, communities, config):
                 base_url = config["llm"]["base_url"]
 
                 # Call LLM
-                # response = call_llm(model, user_prompt, api_key, system_prompt, max_tokens, temperature, base_url)
                 response = call_openai(
                     model, user_prompt, system_prompt, max_tokens, temperature, base_url
                 )
@@ -631,11 +658,11 @@ def _infer_relationships_with_llm(triples, communities, config):
                             and "object" in triple
                         ):
                             # Skip self-referencing triples
-                            if triple["subject"] == triple["object"]:
+                            if triple.get("subject") == triple.get("object"):
                                 continue
                             triple["inferred"] = True
                             triple["predicate"] = limit_predicate_length(
-                                triple["predicate"]
+                                triple.get("predicate", "")
                             )
                             new_triples.append(triple)
 
@@ -685,13 +712,15 @@ def _infer_within_community_relationships(triples, communities, config):
             if a != b
         }
 
-        # Mark existing connections
+        # Mark existing connections (FIXED: Added None checks)
         for triple in triples:
+            subj = triple.get("subject")
+            obj = triple.get("object")
             if (
-                triple["subject"] in community_entities
-                and triple["object"] in community_entities
+                subj and obj and
+                subj in community_entities and obj in community_entities
             ):
-                connections[(triple["subject"], triple["object"])] = True
+                connections[(subj, obj)] = True
 
         # Find disconnected pairs that might be semantically related
         disconnected_pairs = []
@@ -720,9 +749,11 @@ def _infer_within_community_relationships(triples, communities, config):
             entities_of_interest.add(b)
 
         for triple in triples:
+            subj = triple.get("subject")
+            obj = triple.get("object")
             if (
-                triple["subject"] in entities_of_interest
-                or triple["object"] in entities_of_interest
+                (subj and subj in entities_of_interest) or
+                (obj and obj in entities_of_interest)
             ):
                 context_triples.append(triple)
 
@@ -753,7 +784,6 @@ def _infer_within_community_relationships(triples, communities, config):
             base_url = config["llm"]["base_url"]
 
             # Call LLM
-            # response = call_llm(model, user_prompt, api_key, system_prompt, max_tokens, temperature, base_url)
             response = call_openai(
                 model, user_prompt, system_prompt, max_tokens, temperature, base_url
             )
@@ -772,11 +802,11 @@ def _infer_within_community_relationships(triples, communities, config):
                         and "object" in triple
                     ):
                         # Skip self-referencing triples
-                        if triple["subject"] == triple["object"]:
+                        if triple.get("subject") == triple.get("object"):
                             continue
                         triple["inferred"] = True
                         triple["predicate"] = limit_predicate_length(
-                            triple["predicate"]
+                            triple.get("predicate", "")
                         )
                         new_triples.append(triple)
 
@@ -809,10 +839,13 @@ def _infer_relationships_by_lexical_similarity(entities, triples):
     new_triples = []
     processed_pairs = set()
 
-    # Create a dictionary to track existing relationships
+    # Create a dictionary to track existing relationships (FIXED: Added None checks)
     existing_relationships = set()
     for triple in triples:
-        existing_relationships.add((triple["subject"], triple["object"]))
+        subj = triple.get("subject")
+        obj = triple.get("object")
+        if subj and obj:
+            existing_relationships.add((subj, obj))
 
     # Check for lexical similarity between entities
     entities_list = list(entities)
