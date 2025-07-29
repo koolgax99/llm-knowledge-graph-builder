@@ -67,6 +67,12 @@ Your expertise includes identifying consistent entity references and meaningful 
 CRITICAL INSTRUCTION: All relationships (predicates) MUST be no more than 3 words maximum. Ideally 1-2 words. This is a hard limit.
 """
 
+MAIN_UV_SYSTEM_PROMPT = """
+You are an advanced AI system specialized in knowledge extraction and knowledge graph generation for UV radiation, climate change, climate science and its effects.
+Your expertise includes identifying consistent entity references and meaningful relationships in text related to the topic above.
+CRITICAL INSTRUCTION: All relationships (predicates) MUST be no more than 3 words maximum. Ideally 1-2 words. This is a hard limit.
+"""
+
 MAIN_LUPUS_USER_PROMPT = """
 Your task: Read the research paper on Lupus (delimited by triple backticks) and identify only the meaningful Subject-Predicate-Object (S-P-O) relationships. Create a JSON array of these triplets while excluding author names, citations, publication dates, journal names, and other metadata.
 Follow these rules carefully:
@@ -155,11 +161,11 @@ Important: Only output the JSON array with the medically meaningful S-P-O object
 """
 
 MAIN_UV_USER_PROMPT = """
-Your task: Analyze the UV forecasting research paper (delimited by triple backticks) and extract only the meaningful Subject-Predicate-Object (S-P-O) relationships related to UV forecasting. Present these as a JSON array of triplets.
+Your task: Analyze the UV forecasting research paper (delimited by triple backticks) and extract only the meaningful Subject-Predicate-Object (S-P-O) relationships related to UV forecasting or climate change or climate science that is mentioned in the report. Present these as a JSON array of triplets.
 
 Follow these specific guidelines:
 
-1. Focus exclusively on UV knowledge: Extract triplets about UV radiation, UV forecasting, UVA/UVB, UV index, and directly related concepts.
+1. Focus exclusively on Climate Science and UV knowledge: Extract triplets about UV radiation, UV forecasting, UVA/UVB, UV index, and directly related concepts.
 
 2. Exclude all metadata: Do not create triplets about researchers, institutions, publication details, citations, or methodological information.
 

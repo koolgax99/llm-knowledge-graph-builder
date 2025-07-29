@@ -33,7 +33,7 @@ def main(query, max_results, output_folder=None, config_path="./config.toml"):
         max_results=max_results,
     )
 
-    pdf_download_folder = results.get("pdf_download_folder", None)
+    #pdf_download_folder = results.get("pdf_download_folder", None)
 
     pdf_download_folder = os.path.join(output_folder, f"{experiment_name}_pubmed_downloads")
 
