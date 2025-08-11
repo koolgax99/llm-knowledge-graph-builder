@@ -6,6 +6,7 @@ import logging
 import sys
 from src.data_pipeline.utils.extract_values import extract_years_from_query
 from src.data_pipeline.pubmed.pubmed_search import run_pubmed_search
+from src.data_pipeline.pubmed.pmid_to_pmcid_converter import convert_pmids_to_pmcids_with_full_row
 from src.data_pipeline.pubmed.pubmed_downloader import run_pubmed_downloader
 from src.data_pipeline.utils.database import (
     init_db,
@@ -103,6 +104,25 @@ def main_data_pipeline(
         except Exception as e:
             logging.error("Error exporting data: %s", str(e))
 
+    # Convert PMIDs to PMCIDs and retain full rows
+    try:
+        logging.info("Converting PMIDs to PMCIDs...")
+        pmid_to_pmcid_csv_filename = os.path.join(
+            output_folder or "data", f"{experiment_name}_pmid_to_pmcid.csv"
+        )
+        convert_pmids_to_pmcids_with_full_row(
+            input_csv_path=pmid_csv_filename,
+            output_csv_path=pmid_to_pmcid_csv_filename,
+            tool_name="ai_knowledge_graph",
+            email="sanda.n@northeastern.edu"
+        )
+        logging.info(
+            "PMID to PMCID conversion completed and saved to %s",
+            pmid_to_pmcid_csv_filename,
+        )
+    except Exception as e:
+        logging.error("Error converting PMIDs to PMCIDs: %s", str(e))
+
     # Call the Pubmed Downloader to download full articles
     try:
         logging.info("Running PubMed downloader...")
@@ -114,7 +134,7 @@ def main_data_pipeline(
             output_folder or "data", f"{experiment_name}_pubmed_download_errors.csv"
         )
         run_pubmed_downloader(
-            pdf_download_folder, pmid_csv_filename, errors_csv_filename
+            pdf_download_folder, pmid_to_pmcid_csv_filename, errors_csv_filename
         )
     except Exception as e:
         logging.error("Error during PubMed downloader: %s", str(e))
@@ -160,8 +180,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_folder",
         type=str,
-        default="/home/exouser/masters-thesis/ai-knowledge-graph-main/test_data",
+        default="/home/exouser/masters-thesis/ai-knowledge-graph-main/data3",
         help="Folder to save output files",
+    )
+    parser.add_argument(
+        "--max_results",
+        type=int,
+        default=250,
+        help="Maximum number of results to retrieve from PubMed",
     )
     args = parser.parse_args()
 
@@ -172,6 +198,7 @@ if __name__ == "__main__":
             max_year=args.max_year,
             experiment_name=args.experiment_name,
             output_folder=args.output_folder,
+            max_results=args.max_results,  # Default max results
         )
     except KeyboardInterrupt:
         sys.exit("Process interrupted by user.")

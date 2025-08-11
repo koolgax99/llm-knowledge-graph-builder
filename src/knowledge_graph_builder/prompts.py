@@ -73,6 +73,74 @@ Your expertise includes identifying consistent entity references and meaningful 
 CRITICAL INSTRUCTION: All relationships (predicates) MUST be no more than 3 words maximum. Ideally 1-2 words. This is a hard limit.
 """
 
+MAIN_PLASTICS_SYSTEM_PROMPT = """
+You are an advanced AI system specialized in knowledge extraction and knowledge graph generation for plastics, enzymes, microbes, plastic degradation, and related topics.
+Your expertise includes identifying consistent entity references and meaningful relationships in text related to the topic above.
+CRITICAL INSTRUCTION: All relationships (predicates) MUST be no more than 3 words maximum. Ideally 1-2 words. This is a hard limit.
+"""
+
+MAIN_PLASTICS_USER_PROMPT = """
+Here's the rewritten prompt focused on plastic degradation and enzymes:
+
+```
+Your task: Read the research paper on plastic degradation and enzymatic processes (delimited by triple backticks) and identify only the meaningful Subject-Predicate-Object (S-P-O) relationships. Create a JSON array of these triplets while excluding author names, citations, publication dates, journal names, and other metadata.
+
+Follow these rules carefully:
+
+Focus on Plastic & Enzyme Knowledge: Extract triplets related to plastic degradation, enzymatic activities, temperature and pH dependence of enzymatic activity, types of plastics degraded, enzyme structures, reaction mechanisms, and degradation products.
+
+Exclude Metadata: Do not create triplets about authors, institutions, publication details, or citation information.
+
+Entity Consistency: Use consistent names for entities throughout. For example, if "polyethylene terephthalate degrading enzyme" is also mentioned as "PETase", use the most complete and specific form consistently in all triplets.
+
+Atomic Terms: Identify distinct chemical and enzymatic terms. Keep terms atomistic rather than merging multiple concepts.
+
+Unified References: Replace pronouns with the actual referenced entity.
+
+CRITICAL INSTRUCTION: Predicates MUST be 1-3 words maximum. Never more than 3 words. Keep them extremely concise.
+
+Make all the text of S-P-O triplets lowercase, even names of enzymes and chemical compounds.
+
+Focus on degradation mechanisms, enzyme characteristics, reaction conditions, substrate specificity, degradation rates, and biochemical processes rather than research methodology or study design.
+
+Important Considerations:
+- Aim for precision in entity naming - use specific forms that distinguish between similar but different entities
+- Maximize connectedness by using identical entity names for the same concepts throughout the document
+- Consider the entire context when identifying entity references
+- ALL PREDICATES MUST BE 3 WORDS OR FEWER - this is a hard requirement
+
+Output Requirements:
+- Do not include any text or commentary outside of the JSON.
+- Return only the JSON array, with each triple as an object containing "subject", "predicate", and "object".
+- Make sure the JSON is valid and properly formatted.
+
+Example of the desired output structure:
+[
+  {
+    "subject": "PETase",
+    "predicate": "degrades",
+    "object": "polyethylene terephthalate"
+  },
+  {
+    "subject": "thermopetase",
+    "predicate": "activated at",
+    "object": "high temperatures"
+  },
+  {
+    "subject": "cutinase",
+    "predicate": "requires",
+    "object": "alkaline ph"
+  },
+  {
+    "subject": "plastic degradation",
+    "predicate": "produces",
+    "object": "microplastics"
+  }
+]
+
+Important: Only output the JSON array with the scientifically meaningful S-P-O objects and nothing else. Exclude any triples related to paper authors, study methodology, publication details, or other scholarly metadata.
+"""
+
 MAIN_LUPUS_USER_PROMPT = """
 Your task: Read the research paper on Lupus (delimited by triple backticks) and identify only the meaningful Subject-Predicate-Object (S-P-O) relationships. Create a JSON array of these triplets while excluding author names, citations, publication dates, journal names, and other metadata.
 Follow these rules carefully:
@@ -117,7 +185,7 @@ Important: Only output the JSON array with the medically meaningful S-P-O object
 """
 
 MAIN_SCLC_USER_PROMPT = """
-Your task: Read the research paper on Lupus (delimited by triple backticks) and identify only the meaningful Subject-Predicate-Object (S-P-O) relationships. Create a JSON array of these triplets while excluding author names, citations, publication dates, journal names, and other metadata.
+Your task: Read the research paper on SCLC (delimited by triple backticks) and identify only the meaningful Subject-Predicate-Object (S-P-O) relationships. Create a JSON array of these triplets while excluding author names, citations, publication dates, journal names, and other metadata.
 Follow these rules carefully:
 
 Focus on Medical Related Knowledge: Extract triplets related to SCLC / Neuroendocrines / Small cell lung cancer mechanisms, symptoms, treatments, diagnosis, and related medical concepts only. You can also extract triplets related to something that is indirectly related to SCLC, with third order or fourth order relationships.
@@ -204,6 +272,8 @@ Example of desired output structure:
 
 Important: Only output the JSON array with meaningful UV forecasting S-P-O relationships. Exclude any triplets related to paper authors, study design, publication details, or other scholarly metadata.
 """
+
+
 
 # Phase 2: Entity standardization prompts
 ENTITY_RESOLUTION_SYSTEM_PROMPT = """

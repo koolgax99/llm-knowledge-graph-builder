@@ -17,9 +17,14 @@ import xml.etree.ElementTree as ET
 import time
 from dotenv import load_dotenv
 from indra.literature.pmc_client import extract_text
+import re
+import concurrent.futures
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
+
+lock = threading.Lock()
 
 # Set your email for Entrez from the environment variable
 ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL")
@@ -44,31 +49,25 @@ def check_full_text_availability(pmid: str) -> Tuple[bool, Optional[str]]:
         Tuple of (availability boolean, PMC ID if available)
     """
     try:
-        print(f"Checking PMC availability for PMID {pmid}")
-        handle = Entrez.elink(dbfrom="pubmed", db="pmc", id=pmid)
+        handle = Entrez.elink(dbfrom="pubmed", db="pmc", link_name="pubmed_pmc", id=pmid, retmode='text')
 
-        if not handle:
-            print(f"No PMC link found for PMID {pmid}")
-            return False, None
-
-        xml_content = handle.read()
+        handle_read = handle.read()
         handle.close()
 
-        # Parse XML to get PMC ID
-        root = ET.fromstring(xml_content)
-        linksetdb = root.find(".//LinkSetDb")
-        if linksetdb is None:
+        root = ET.fromstring(handle_read)
+
+        pmcid = ""
+
+        for link in root.iter('Link'):
+            for id in link.iter('Id'):
+                pmcid = id.text
+
+        if pmcid != "":
+            print(f"PMC ID for PMID {pmid}: {pmcid}")
+        else:
             print(f"No PMC ID found for PMID {pmid}")
-            return False, None
 
-        id_elem = linksetdb.find(".//Id")
-        if id_elem is None:
-            print(f"No PMC ID element found for PMID {pmid}")
-            return False, None
-
-        pmc_id = id_elem.text
-        print(f"Found PMC ID {pmc_id} for PMID {pmid}")
-        return True, pmc_id
+        return pmcid != "", pmcid if pmcid else None
 
     except Exception as e:
         print(f"Error checking PMC availability for PMID {pmid}: {str(e)}")
@@ -88,18 +87,18 @@ def get_full_text(pmid: str) -> Optional[str]:
     """
     try:
         # First check availability and get PMC ID
-        available, pmc_id = check_full_text_availability(pmid)
-        if not available or pmc_id is None:
+
+        if pmid == "None":
             print(f"Full text not available in PMC for PMID {pmid}")
             return None
 
-        print(f"Fetching full text for PMC ID {pmc_id}")
+        print(f"Fetching full text for PMC ID {pmid}")
         content = ""
         retstart = 0
 
         while True:
             full_text_handle = Entrez.efetch(
-                db="pmc", id=pmc_id, rettype="xml", retstart=retstart
+                db="pmc", id=pmid, rettype="xml", retstart=retstart
             )
 
             if not full_text_handle:
@@ -121,7 +120,7 @@ def get_full_text(pmid: str) -> Optional[str]:
             retstart += len(chunk)
 
             # Add small delay to respect API rate limits
-            time.sleep(0.5)
+            time.sleep(2)
 
         result = extract_text(content)
         return result
@@ -130,6 +129,14 @@ def get_full_text(pmid: str) -> Optional[str]:
         print(f"Error getting full text for PMID {pmid}: {str(e)}")
         return None
 
+
+def sanitize_filename(name):
+    """Sanitize the filename to remove/replace invalid characters."""
+    name = str(name)
+    name = re.sub(r'[\\/*?:"<>|]', "_", name)  # Windows-safe
+    name = re.sub(r'\s+', '_', name)  # Replace spaces with underscores
+    name = re.sub(r'[^\w\-_.]', '_', name)  # Only allow safe characters
+    return name.strip('_')
 
 def parse_arguments():
     """Parse and validate command line arguments."""
@@ -174,57 +181,59 @@ def parse_arguments():
     return args
 
 
-def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file):
-    """Main execution function."""
-    # Create output directory if it doesn't exist
+
+def fetch_and_save(pmid, name, output_dir, errors_csv_file):
+    """Worker function for downloading and saving full text."""
+    print(f"Trying to fetch pmid {pmid}")
+    safe_name = sanitize_filename(name)
+    
+    try:
+        output = get_full_text(str(pmid))
+        if output:
+            filepath = os.path.join(output_dir, f"{safe_name}.txt")
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(output)
+            print(f"** fetching of reprint {pmid} succeeded")
+        else:
+            raise ValueError("No full text available")
+
+    except requests.HTTPError as e:
+        status = e.response.status_code
+        print(f"** fetching of reprint {pmid} failed, HTTP {status}")
+        with lock:
+            with open(errors_csv_file, 'a', encoding='utf-8') as f:
+                f.write(f"{pmid},{safe_name},HTTP {status}\n")
+
+    except Exception as e:
+        print(f"** fetching of reprint {pmid} failed with error: {str(e)}")
+        with lock:
+            with open(errors_csv_file, 'a', encoding='utf-8') as f:
+                f.write(f"{pmid},{safe_name},{str(e)}\n")
+
+
+def run_pubmed_downloader(output_dir, input_csv_file, errors_csv_file, max_workers=8):
+    """Main execution function with multithreading."""
     if not os.path.exists(output_dir):
-        print(f"Output directory of {output_dir} did not exist. Created the directory.")
-        os.mkdir(output_dir)
+        print(f"Output directory {output_dir} did not exist. Created.")
+        os.makedirs(output_dir)
 
     df = pd.read_csv(input_csv_file)
-    pmids = df["PMID"].tolist()
-    names = df["Title"].tolist()
-    names = [str(name) for name in names]  # Ensure all names are strings
+    pmids = df["PMCID"].tolist()
+    names = df["Title"].astype(str).tolist()
 
-    names = [
-        name.replace(" ", "_").replace(" ", "_").replace(".", "_").replace("/", "_")
-        for name in names
-    ]
-
-    # Initialize errors CSV file with header if it doesn't exist
+    # Initialize error log file if it doesn't exist
     if not os.path.exists(errors_csv_file):
-        with open(errors_csv_file, 'w') as f:
-            f.write("pmid,name\n")
+        with open(errors_csv_file, 'w', encoding='utf-8') as f:
+            f.write("pmid,name,error\n")
 
-    # Process each PMID
-    for pmid, name in zip(pmids, names):
-        print(f"Trying to fetch pmid {pmid}")
-
-        try:
-            output = get_full_text(str(pmid))
-            if output:
-                # Save the full text to a file
-                filepath = os.path.join(output_dir, f"{name}.txt")
-                with open(filepath, "w", encoding="utf-8") as f:
-                    f.write(output)
-                print(f"** fetching of reprint {pmid} succeeded")
-            else:
-                print(f"** fetching of reprint {pmid} failed, no full text available")
-                # Write error immediately to CSV
-                with open(errors_csv_file, 'a') as f:
-                    f.write(f"{pmid},{name}\n")
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                print(f"** fetching of reprint {pmid} failed, article not found")
-                # Write error immediately to CSV
-                with open(errors_csv_file, 'a') as f:
-                    f.write(f"{pmid},{name}\n")
-        except Exception as e:
-            print(f"** fetching of reprint {pmid} failed with error: {str(e)}")
-            # Write error immediately to CSV
-            with open(errors_csv_file, 'a') as f:
-                f.write(f"{pmid},{name}\n")
-
+    # Use ThreadPoolExecutor to run downloads in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(fetch_and_save, pmid, name, output_dir, errors_csv_file)
+            for pmid, name in zip(pmids, names)
+        ]
+        # Optional: wait for all to complete
+        concurrent.futures.wait(futures)
 
 if __name__ == "__main__":
     args = parse_arguments()

@@ -77,4 +77,6 @@ lib/
 data/
 logs/
 data2/
+data3/
 output/
+test_data/

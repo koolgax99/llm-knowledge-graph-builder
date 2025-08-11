@@ -58,8 +58,8 @@ def process_json_file(json_file_path, output_dir):
 
 def convert_folder():
     # Hardcoded folder paths - modify these as needed
-    input_folder = "/home/exouser/masters-thesis/ai-knowledge-graph-main/data/output/data_output_sclc_exp_1"  # Folder containing JSON files
-    output_folder = "/home/exouser/masters-thesis/ai-knowledge-graph-main/data/output/data_output_sclc_exp_1/txt"  # Folder to save text files
+    output_folder = "/home/exouser/masters-thesis/ai-knowledge-graph-main/data3/pubmed_plasticity_text_outputs"  # Folder containing JSON files
+    input_folder = "/home/exouser/masters-thesis/ai-knowledge-graph-main/data3/pubmed_plasticity_json_outputs"  # Folder to save text files
 
     # Create output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)

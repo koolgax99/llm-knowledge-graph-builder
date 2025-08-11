@@ -6,6 +6,8 @@ import argparse
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 # # Add the parent directory to the Python path for imports
 # sys.path.insert(
@@ -34,8 +36,12 @@ from src.knowledge_graph_builder.prompts import (
     MAIN_USER_PROMPT,
     MAIN_LUPUS_USER_PROMPT,
     MAIN_UV_USER_PROMPT,
+    MAIN_UV_SYSTEM_PROMPT,
+    MAIN_PLASTICS_SYSTEM_PROMPT,
+    MAIN_PLASTICS_USER_PROMPT,
     MAIN_SCLC_USER_PROMPT,
     MAIN_SCLC_SYSTEM_PROMPT,
+    
 )
 
 
@@ -52,8 +58,8 @@ def process_with_llm(config, input_text, debug=False):
         List of extracted triples or None if processing failed
     """
     # Use prompts from the prompts module
-    system_prompt = MAIN_SCLC_SYSTEM_PROMPT
-    user_prompt = MAIN_SCLC_USER_PROMPT
+    system_prompt = MAIN_PLASTICS_SYSTEM_PROMPT
+    user_prompt = MAIN_PLASTICS_USER_PROMPT
     user_prompt += f"```\n{input_text}```\n"
 
     # LLM configuration
@@ -336,38 +342,49 @@ def main_kg_builder(
     os.makedirs(output_folder, exist_ok=True)
     input_files = os.listdir(input_folder)
 
-    for index, file_name in enumerate(input_files):
-        
+    input_files = input_files[75:]
+
+    # 🔽 PLACE THIS FUNCTION HERE
+    def process_wrapper(index, file_name):
         print("=" * 50)
         print(f"Processing file {index + 1}/{len(input_files)}: {file_name}")
         print("=" * 50)
 
-        if file_name.endswith(".txt"):
-            input_file = os.path.join(input_folder, file_name)
-            output_file_name = f"{os.path.splitext(file_name)[0]}.json"
-            output_file_path = os.path.join(
-                output_folder, output_file_name
-            )
-            
-            if output_file_name in os.listdir(output_folder):
-                print(f"Skipping {output_file_name} as it already exists")
-                continue
-            else:
-                result = process_file(config, input_file, output_file_path, debug)
-                if result:
-                    # Visualize the combined knowledge graph
-                    output_file = output_file_path.replace(".json", ".html")
-                    stats = visualize_knowledge_graph(result, output_file, config=config)
-                    print("\nKnowledge Graph Statistics:")
-                    print(f"Nodes: {stats['nodes']}")
-                    print(f"Edges: {stats['edges']}")
-                    print(f"Communities: {stats['communities']}")
-                    print(
-                        "\nTo view the visualization, open the following file in your browser:"
-                    )
-                    print(f"file://{os.path.abspath(output_file)}")
-        else:
+        if not file_name.endswith(".txt"):
             print("No valid knowledge graphs were generated for this file")
+            return
+
+        input_file = os.path.join(input_folder, file_name)
+        output_file_name = f"{os.path.splitext(file_name)[0]}.json"
+        output_file_path = os.path.join(output_folder, output_file_name)
+
+        if output_file_name in os.listdir(output_folder):
+            print(f"Skipping {output_file_name} as it already exists")
+            return
+
+        result = process_file(config, input_file, output_file_path, debug)
+        if result:
+            output_file = output_file_path.replace(".json", ".html")
+            stats = visualize_knowledge_graph(result, output_file, config=config)
+            print("\nKnowledge Graph Statistics:")
+            print(f"Nodes: {stats['nodes']}")
+            print(f"Edges: {stats['edges']}")
+            print(f"Communities: {stats['communities']}")
+            print("\nTo view the visualization, open the following file in your browser:")
+            print(f"file://{os.path.abspath(output_file)}")
+
+    # 🔽 AND PLACE THIS AFTER THE FUNCTION
+    max_workers = min(3, len(input_files))  # Adjust worker count as needed
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(process_wrapper, index, file_name)
+            for index, file_name in enumerate(input_files)
+        ]
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f"Error occurred during file processing: {e}")
 
 
 if __name__ == "__main__":
